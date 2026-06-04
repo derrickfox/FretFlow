@@ -11,6 +11,11 @@ import {
   stringToVisualRow,
   trailsGlowFromPractice,
 } from '../utils/noteHelpers';
+import {
+  bendVisualLiftPx,
+  shouldShowBendBadge,
+  type BendVisualContext,
+} from '../utils/bendDisplay';
 import { mergeNotesAtSameFret } from '../utils/mergeNeckDots';
 import { blendTrackNoteColors } from '../utils/trackColors';
 import { NoteDot } from './NoteDot';
@@ -149,19 +154,42 @@ export function GuitarNeck({
           <div className={styles.notesLayer}>
           {mergedDots.map((dot) => {
             const row = stringToVisualRow(dot.string, stringCount);
-            const leftPct = practice.leftHanded
-              ? 100 - ((dot.fret + 0.5) / (MAX_FRET + 1)) * 100
-              : ((dot.fret + 0.5) / (MAX_FRET + 1)) * 100;
+            const fretToLeft = (fret: number) =>
+              practice.leftHanded
+                ? 100 - ((fret + 0.5) / (MAX_FRET + 1)) * 100
+                : ((fret + 0.5) / (MAX_FRET + 1)) * 100;
+            const bendCtx: BendVisualContext | undefined = dot.bend
+              ? {
+                  state: dot.state,
+                  currentTick,
+                  startTick: dot.startTick,
+                  endTick: dot.endTick,
+                }
+              : undefined;
+            const leftPct = fretToLeft(dot.fret);
             const topPct = ((row + 0.5) / stringCount) * 100;
             const colors = blendTrackNoteColors(dot.trackIndices, neckTrackIndices);
+            const bendLiftPx =
+              dot.bend && bendCtx
+                ? bendVisualLiftPx(dot.bend, bendCtx, stringCount)
+                : 0;
+            const showBadge = shouldShowBendBadge(
+              dot.bend,
+              practice.showBendBadges,
+            );
+            const isBending = bendLiftPx > 0.5;
 
             return (
               <div
                 key={dot.id}
-                className={styles.notePosition}
+                className={`${styles.notePosition} ${isBending ? styles.bendLift : ''}`}
                 style={{
                   left: `${leftPct}%`,
                   top: `${topPct}%`,
+                  transform:
+                    bendLiftPx > 0
+                      ? `translateY(calc(-1 * ${bendLiftPx}px))`
+                      : undefined,
                 }}
               >
                 <NoteDot
@@ -171,6 +199,7 @@ export function GuitarNeck({
                   label={dot.label}
                   leftHanded={practice.leftHanded}
                   colors={colors}
+                  bend={showBadge ? dot.bend : undefined}
                 />
               </div>
             );

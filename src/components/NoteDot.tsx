@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { DisplayMode } from '../types/guitar';
+import type { NoteBendInfo } from '../utils/bendDisplay';
+import { formatBendLabel } from '../utils/bendDisplay';
 import type { NoteVisualState } from '../utils/noteHelpers';
 import type { TrackNoteColors } from '../utils/trackColors';
 import styles from './NoteDot.module.css';
@@ -11,6 +13,7 @@ type NoteDotProps = {
   label?: string;
   leftHanded?: boolean;
   colors?: TrackNoteColors;
+  bend?: NoteBendInfo;
 };
 
 export function NoteDot({
@@ -20,12 +23,14 @@ export function NoteDot({
   label,
   leftHanded,
   colors,
+  bend,
 }: NoteDotProps) {
   const trails = displayMode === 'trails';
   const classNames = [
     styles.dot,
     colors && state !== 'smolder' && state !== 'past' ? styles.custom : '',
     trails ? styles.trails : '',
+    bend ? styles.hasBend : '',
     styles[state],
     leftHanded ? styles.leftHanded : '',
   ]
@@ -46,10 +51,19 @@ export function NoteDot({
     <div
       className={classNames}
       style={customStyle}
-      title={label}
       data-note-state={state}
       data-display-mode={displayMode}
+      title={
+        bend
+          ? `${label ? `${label} · ` : ''}${formatBendLabel(bend)}`
+          : label
+      }
     >
+      {bend ? (
+        <span className={styles.bendBadge} aria-hidden>
+          {formatBendLabel(bend)}
+        </span>
+      ) : null}
       {label ? <span className={styles.label}>{label}</span> : null}
     </div>
   );

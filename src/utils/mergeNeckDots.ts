@@ -6,6 +6,7 @@
 // Reason: Overlapping dots with offset were cluttered; blended hue shows both tracks at once.
 
 import type { GuitarNoteEvent } from '../types/guitar';
+import type { NoteBendInfo } from './bendDisplay';
 import type { ClassifiedNote, NoteVisualState } from './noteHelpers';
 
 export type MergedNeckDot = {
@@ -16,7 +17,16 @@ export type MergedNeckDot = {
   intensity: number;
   trackIndices: number[];
   label?: string;
+  bend?: NoteBendInfo;
+  startTick: number;
+  endTick: number;
 };
+
+function mergeBend(a?: NoteBendInfo, b?: NoteBendInfo): NoteBendInfo | undefined {
+  if (!a) return b;
+  if (!b) return a;
+  return a.peakSemitones >= b.peakSemitones ? a : b;
+}
 
 const STATE_RANK: Record<NoteVisualState, number> = {
   active: 5,
@@ -50,6 +60,9 @@ export function mergeNotesAtSameFret(
         intensity,
         trackIndices: [note.trackIndex],
         label: showNoteNames ? note.noteName : undefined,
+        bend: note.bend,
+        startTick: note.startTick,
+        endTick: note.endTick,
       });
       continue;
     }
@@ -60,6 +73,9 @@ export function mergeNotesAtSameFret(
     if (STATE_RANK[state] > STATE_RANK[existing.state]) {
       existing.state = state;
       existing.intensity = intensity;
+      existing.startTick = note.startTick;
+      existing.endTick = note.endTick;
+      if (note.bend) existing.bend = note.bend;
     } else if (state === existing.state) {
       existing.intensity = Math.max(existing.intensity, intensity);
     }
@@ -68,6 +84,7 @@ export function mergeNotesAtSameFret(
       names.add(note.noteName);
       existing.label = [...names].join(' · ');
     }
+    existing.bend = mergeBend(existing.bend, note.bend);
   }
 
   return [...byFret.values()];

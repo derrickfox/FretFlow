@@ -1,5 +1,7 @@
 /** Normalized note timeline — decoupled from Guitar Pro / alphaTab internals. */
 
+import type { NoteBendInfo } from '../utils/bendDisplay';
+
 export type GuitarNoteEvent = {
   id: string;
   trackIndex: number;
@@ -17,6 +19,8 @@ export type GuitarNoteEvent = {
   noteName?: string;
   velocity?: number;
   measure?: number;
+  /** String bend from Guitar Pro, when present */
+  bend?: NoteBendInfo;
 };
 
 import type { TrackKind } from '../utils/trackClassification';
@@ -53,6 +57,8 @@ export type PracticeSettings = {
   showNoteNames: boolean;
   leftHanded: boolean;
   showStandardTuning: boolean;
+  /** Orange ↑/↕ bend labels on dots (vertical bend lift always on) */
+  showBendBadges: boolean;
   /** How far ahead of the playhead upcoming notes appear on the neck */
   noteLookaheadMs: number;
   /** How long played notes stay visible after they end */
@@ -97,6 +103,7 @@ export const DEFAULT_PRACTICE: PracticeSettings = {
   showNoteNames: false,
   leftHanded: false,
   showStandardTuning: true,
+  showBendBadges: false,
   noteLookaheadMs: DEFAULT_NOTE_LOOKAHEAD_MS,
   noteLingerMs: DEFAULT_NOTE_LINGER_MS,
   trailsPeakGlow: DEFAULT_TRAILS_PEAK_GLOW,

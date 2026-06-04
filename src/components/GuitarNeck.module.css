@@ -145,6 +145,11 @@
   height: 0;
 }
 
+/* Smooth vertical push while a bend plays */
+.bendLift {
+  transition: transform 0.07s linear;
+}
+
 @media (max-width: 768px) {
   .neck {
     min-width: 100%;

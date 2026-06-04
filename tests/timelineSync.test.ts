@@ -73,4 +73,84 @@ describe('fretboard tab sync', () => {
       .sort();
     expect(activeNotesAtTick(events, tick)).toEqual(expected);
   });
+
+  it('hotel-california-solo preloaded file parses with guitar events', async () => {
+    const { result } = await parseGuitarProFile(
+      loadBuffer('public/preloaded/hotel-california-solo.gp'),
+    );
+    const guitar = result.tracks.find((t) => t.isGuitar);
+    expect(guitar).toBeDefined();
+    const events = result.eventsByTrack.get(guitar!.index) ?? [];
+    expect(events.length).toBeGreaterThan(0);
+  });
+
+  it('stairway-to-heaven-solo preloaded file parses with guitar events', async () => {
+    const { result } = await parseGuitarProFile(
+      loadBuffer('public/preloaded/stairway-to-heaven-solo.gp'),
+    );
+    const guitar = result.tracks.find((t) => t.isGuitar);
+    expect(guitar).toBeDefined();
+    const events = result.eventsByTrack.get(guitar!.index) ?? [];
+    expect(events.length).toBeGreaterThan(0);
+  });
+
+  it('layla preloaded file parses with guitar events', async () => {
+    const { result } = await parseGuitarProFile(
+      loadBuffer('public/preloaded/layla.gp'),
+    );
+    const guitar = result.tracks.find((t) => t.isGuitar);
+    expect(guitar).toBeDefined();
+    const events = result.eventsByTrack.get(guitar!.index) ?? [];
+    expect(events.length).toBeGreaterThan(0);
+  });
+
+  it('bohemian-rhapsody-solo preloaded file parses with guitar events', async () => {
+    const { result } = await parseGuitarProFile(
+      loadBuffer('public/preloaded/bohemian-rhapsody-solo.gp'),
+    );
+    const guitar = result.tracks.find((t) => t.isGuitar);
+    expect(guitar).toBeDefined();
+    const events = result.eventsByTrack.get(guitar!.index) ?? [];
+    expect(events.length).toBeGreaterThan(0);
+  });
+
+  it('gimme-three-steps preloaded file parses with guitar events', async () => {
+    const { result } = await parseGuitarProFile(
+      loadBuffer('public/preloaded/gimme-three-steps.gp'),
+    );
+    const guitar = result.tracks.find((t) => t.isGuitar);
+    expect(guitar).toBeDefined();
+    const events = result.eventsByTrack.get(guitar!.index) ?? [];
+    expect(events.length).toBeGreaterThan(0);
+  });
+
+  it('we-are-the-champions preloaded file parses with guitar events', async () => {
+    const { result } = await parseGuitarProFile(
+      loadBuffer('public/preloaded/we-are-the-champions.gp'),
+    );
+    const guitar = result.tracks.find((t) => t.isGuitar);
+    expect(guitar).toBeDefined();
+    const events = result.eventsByTrack.get(guitar!.index) ?? [];
+    expect(events.length).toBeGreaterThan(0);
+  });
+
+  it('time preloaded file parses with guitar events', async () => {
+    const { result } = await parseGuitarProFile(
+      loadBuffer('public/preloaded/time.gp'),
+    );
+    const guitar = result.tracks.find((t) => t.isGuitar);
+    expect(guitar).toBeDefined();
+    const events = result.eventsByTrack.get(guitar!.index) ?? [];
+    expect(events.length).toBeGreaterThan(0);
+  });
+
+  it('waltz-2 preloaded file parses with guitar events', async () => {
+    const { result } = await parseGuitarProFile(
+      loadBuffer('public/preloaded/waltz-2.gp'),
+    );
+    const guitar = result.tracks.find((t) => t.isGuitar);
+    expect(guitar).toBeDefined();
+    const events = result.eventsByTrack.get(guitar!.index) ?? [];
+    expect(events.length).toBeGreaterThan(0);
+  });
 });

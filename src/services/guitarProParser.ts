@@ -14,6 +14,7 @@ import {
   loadScoreFromBytes,
 } from './alphatabAdapter';
 import { classifyTrackKind } from '../utils/trackClassification';
+import { extractNoteBendInfo } from '../utils/bendDisplay';
 import { fretToNoteName } from '../utils/noteHelpers';
 
 export type ParseOutcome = {
@@ -131,6 +132,8 @@ function extractTrackEvents(
             if (!note.isStringed) continue;
             if (note.fret < 0) continue;
 
+            const bend = extractNoteBendInfo(note);
+
             events.push({
               id: `${trackIndex}-${idCounter++}`,
               trackIndex,
@@ -142,6 +145,7 @@ function extractTrackEvents(
               durationMs,
               noteName: fretToNoteName(note.string, note.fret, tuningMidi),
               measure,
+              ...(bend ? { bend } : {}),
             });
           }
         }

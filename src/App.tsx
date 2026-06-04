@@ -441,6 +441,16 @@ function App() {
                     />
                     Standard tuning labels
                   </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={practice.showBendBadges}
+                      onChange={(e) =>
+                        setPractice((p) => ({ ...p, showBendBadges: e.target.checked }))
+                      }
+                    />
+                    Bend amount labels
+                  </label>
                 </div>
                 <label className={styles.lookaheadRow}>
                   <span className={styles.lookaheadLabel}>
