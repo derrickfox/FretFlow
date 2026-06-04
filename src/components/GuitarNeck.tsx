@@ -1,12 +1,15 @@
-import { useMemo } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import type { GuitarNoteEvent, PracticeSettings } from '../types/guitar';
 import { FRET_MARKERS, MAX_FRET, STANDARD_TUNING } from '../types/guitar';
 import type { DisplayMode } from '../types/guitar';
 import {
   classifyNoteAtTime,
-  filterEventsInTimeWindow,
-  getPlaybackTimeWindow,
+  extendWindowForSongStart,
+  filterEventsInTickWindow,
+  getPlaybackTickWindow,
+  millisToTicks,
   stringToVisualRow,
+  trailsGlowFromPractice,
 } from '../utils/noteHelpers';
 import { mergeNotesAtSameFret } from '../utils/mergeNeckDots';
 import { blendTrackNoteColors } from '../utils/trackColors';
@@ -15,7 +18,10 @@ import styles from './GuitarNeck.module.css';
 
 type GuitarNeckProps = {
   events: GuitarNoteEvent[];
-  currentMs: number;
+  /** Synth midi tick from alphaTab — must match tab cursor */
+  currentTick: number;
+  /** Playback tempo (BPM) for ms→tick lookahead/linger */
+  playbackTempo: number;
   displayMode: DisplayMode;
   practice: PracticeSettings;
   stringCount?: number;
@@ -25,7 +31,8 @@ type GuitarNeckProps = {
 
 export function GuitarNeck({
   events,
-  currentMs,
+  currentTick,
+  playbackTempo,
   displayMode,
   practice,
   stringCount = 6,
@@ -42,29 +49,53 @@ export function GuitarNeck({
 
   const mergedDots = useMemo(() => {
     const { noteLookaheadMs, noteLingerMs } = practice;
-    const { start, end } = getPlaybackTimeWindow(currentMs, noteLookaheadMs, noteLingerMs);
-    const windowed = filterEventsInTimeWindow(events, start, end);
+    const tempo = Math.max(playbackTempo, 40);
+    const ahead = millisToTicks(noteLookaheadMs, tempo);
+    const baseWindow = getPlaybackTickWindow(
+      currentTick,
+      tempo,
+      displayMode,
+      noteLookaheadMs,
+      noteLingerMs,
+    );
+    const firstNoteTick = events[0]?.startTick;
+    const { start, end } = extendWindowForSongStart(
+      baseWindow,
+      currentTick,
+      firstNoteTick,
+      ahead,
+    );
+    const windowed = filterEventsInTickWindow(events, start, end);
+    const linger = millisToTicks(noteLingerMs, tempo);
+    const trailsGlow =
+      displayMode === 'trails'
+        ? trailsGlowFromPractice(practice.trailsPeakGlow, practice.trailsGlowLeadPercent)
+        : undefined;
     const classified = windowed
-      .map((note) => ({
-        note,
-        state: classifyNoteAtTime(
+      .map((note) => {
+        const c = classifyNoteAtTime(
           note,
-          currentMs,
+          currentTick,
           displayMode,
-          noteLookaheadMs,
-          noteLingerMs,
-        ),
-      }))
-      .filter((x): x is { note: GuitarNoteEvent; state: NonNullable<ReturnType<typeof classifyNoteAtTime>> } =>
-        x.state !== null,
+          ahead,
+          linger,
+          trailsGlow,
+        );
+        return c ? { note, classified: c } : null;
+      })
+      .filter((x): x is { note: GuitarNoteEvent; classified: NonNullable<ReturnType<typeof classifyNoteAtTime>> } =>
+        x !== null,
       );
     return mergeNotesAtSameFret(classified, practice.showNoteNames);
   }, [
     events,
-    currentMs,
+    currentTick,
+    playbackTempo,
     displayMode,
     practice.noteLookaheadMs,
     practice.noteLingerMs,
+    practice.trailsPeakGlow,
+    practice.trailsGlowLeadPercent,
     practice.showNoteNames,
   ]);
 
@@ -76,7 +107,11 @@ export function GuitarNeck({
     .join(' ');
 
   return (
-    <div className={styles.wrapper}>
+    <div
+      className={styles.wrapper}
+      data-fretboard-dots={mergedDots.length}
+      data-fretboard-events={events.length}
+    >
       <div className={neckClass}>
         <div className={styles.fretNumbers}>
           <div className={styles.corner} />
@@ -87,27 +122,31 @@ export function GuitarNeck({
           ))}
         </div>
 
-        {strings.map((label, row) => (
-          <div key={row} className={styles.stringRow}>
-            <div className={styles.stringLabel}>{label}</div>
-            <div className={styles.fretCells}>
-              {frets.map((fret) => {
-                const isMarker = (FRET_MARKERS as readonly number[]).includes(fret);
-                return (
-                  <div
-                    key={fret}
-                    className={`${styles.cell} ${isMarker ? styles.markerFret : ''} ${fret === 0 ? styles.nut : ''}`}
-                  >
-                    {fret === 12 && isMarker ? <span className={styles.doubleDot} /> : null}
-                    {isMarker && fret !== 12 ? <span className={styles.fretDot} /> : null}
-                  </div>
-                );
-              })}
+        <div
+          className={styles.stringsBlock}
+          style={{ '--string-count': String(stringCount) } as CSSProperties}
+        >
+          {strings.map((label, row) => (
+            <div key={row} className={styles.stringRow}>
+              <div className={styles.stringLabel}>{label}</div>
+              <div className={styles.fretCells}>
+                {frets.map((fret) => {
+                  const isMarker = (FRET_MARKERS as readonly number[]).includes(fret);
+                  return (
+                    <div
+                      key={fret}
+                      className={`${styles.cell} ${isMarker ? styles.markerFret : ''} ${fret === 0 ? styles.nut : ''}`}
+                    >
+                      {fret === 12 && isMarker ? <span className={styles.doubleDot} /> : null}
+                      {isMarker && fret !== 12 ? <span className={styles.fretDot} /> : null}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
 
-        <div className={styles.notesLayer}>
+          <div className={styles.notesLayer}>
           {mergedDots.map((dot) => {
             const row = stringToVisualRow(dot.string, stringCount);
             const leftPct = practice.leftHanded
@@ -127,6 +166,8 @@ export function GuitarNeck({
               >
                 <NoteDot
                   state={dot.state}
+                  intensity={dot.intensity}
+                  displayMode={displayMode}
                   label={dot.label}
                   leftHanded={practice.leftHanded}
                   colors={colors}
@@ -134,6 +175,7 @@ export function GuitarNeck({
               </div>
             );
           })}
+          </div>
         </div>
       </div>
     </div>

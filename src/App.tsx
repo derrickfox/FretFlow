@@ -7,7 +7,7 @@ import { PlaybackControls } from './components/PlaybackControls';
 import { GuitarNeck } from './components/GuitarNeck';
 import { TabViewer } from './components/TabViewer';
 import { SongInfoPanel } from './components/SongInfoPanel';
-import { parseGuitarProFile } from './services/guitarProParser';
+import { parseGuitarProFile, refreshEventsFromTickCache } from './services/guitarProParser';
 import { playbackEngine } from './services/playbackEngine';
 import type {
   DisplayMode,
@@ -21,6 +21,10 @@ import {
   NOTE_LINGER_MIN_MS,
   NOTE_LOOKAHEAD_MAX_MS,
   NOTE_LOOKAHEAD_MIN_MS,
+  TRAILS_GLOW_LEAD_MAX,
+  TRAILS_GLOW_LEAD_MIN,
+  TRAILS_PEAK_GLOW_MAX,
+  TRAILS_PEAK_GLOW_MIN,
 } from './types/guitar';
 import styles from './App.module.css';
 
@@ -35,11 +39,13 @@ function App() {
   const [playbackError, setPlaybackError] = useState<string | null>(null);
   const [neckTracks, setNeckTracks] = useState<number[]>([]);
   const [audioTracks, setAudioTracks] = useState<number[]>([]);
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('full');
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('standard');
   const [practice, setPractice] = useState<PracticeSettings>(DEFAULT_PRACTICE);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [currentMs, setCurrentMs] = useState(0);
+  const [currentTick, setCurrentTick] = useState(0);
+  const [playbackTempo, setPlaybackTempo] = useState(120);
   const [totalMs, setTotalMs] = useState(0);
   const [speed, setSpeed] = useState(1);
   const [metronomeOn, setMetronomeOn] = useState(false);
@@ -54,10 +60,18 @@ function App() {
     return counts;
   }, [parseResult]);
 
+  // AI_CHANGE:
+  // Tool: Cursor
+  // Model: Composer
+  // Timestamp: 2026-06-05T17:05:00-04:00
+  // Purpose: Merge neck events sorted by startTick (not startMs).
+  // Reason: Ms order diverges from MIDI ticks on multi-track GP files and breaks window search.
   const trackEvents: GuitarNoteEvent[] = useMemo(() => {
     if (!parseResult || neckTracks.length === 0) return [];
     const merged = neckTracks.flatMap((index) => parseResult.eventsByTrack.get(index) ?? []);
-    merged.sort((a, b) => a.startMs - b.startMs || a.trackIndex - b.trackIndex);
+    merged.sort(
+      (a, b) => a.startTick - b.startTick || a.trackIndex - b.trackIndex || a.string - b.string,
+    );
     return merged;
   }, [parseResult, neckTracks]);
 
@@ -82,7 +96,10 @@ function App() {
       .filter((t) => t.isGuitar)
       .map((t) => t.index)
       .sort((a, b) => a - b);
-  }, [parseResult]);
+  }, [parseResult?.tracks]);
+
+  /** Stable key so tick-cache refresh does not retrigger alphaTab load. */
+  const tabNotationTracksKey = tabNotationTracks.join(',');
 
   const selectedTracksLabel = useMemo(() => {
     if (!parseResult || neckTracks.length === 0) return undefined;
@@ -94,17 +111,26 @@ function App() {
   }, [parseResult, neckTracks]);
 
   useEffect(() => {
+    playbackEngine.destroy();
+
     let lastPositionUpdate = 0;
     playbackEngine.attachCallbacks({
-      onPosition: (ms) => {
+      onPosition: (pos) => {
         const now = performance.now();
         if (now - lastPositionUpdate < 32) return;
         lastPositionUpdate = now;
-        setCurrentMs(ms);
+        setCurrentMs(pos.ms);
+        setCurrentTick(pos.tick);
+        setPlaybackTempo(pos.tempo);
+      },
+      onTimelineReady: (tickLookup, score) => {
+        setParseResult((prev) =>
+          prev ? refreshEventsFromTickCache(prev, score, tickLookup) : prev,
+        );
       },
       onState: (playing, ready) => {
         setIsPlaying(playing);
-        if (ready) setIsReady(true);
+        setIsReady(ready);
       },
       onReady: () => {
         const duration = playbackEngine.getTotalMs();
@@ -123,6 +149,12 @@ function App() {
     return () => playbackEngine.destroy();
   }, []);
 
+  // AI_CHANGE:
+  // Tool: Cursor
+  // Model: Composer
+  // Timestamp: 2026-06-05T17:15:00-04:00
+  // Purpose: Load alphaTab only when the GP file changes, not on tick-cache refresh.
+  // Reason: onTimelineReady updated parseResult and re-ran load, leaving Play disabled and breaking audio.
   useEffect(() => {
     const host = tabHostRef.current;
     const scroll = tabScrollRef.current;
@@ -140,7 +172,8 @@ function App() {
     playbackEngine.setSpeed(speed);
     playbackEngine.setMetronome(metronomeOn);
     playbackEngine.setLoop(practice.loopEnabled, practice.loopStartMs, practice.loopEndMs);
-  }, [fileBytes, tabNotationTracks, audioTracks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload song file only
+  }, [fileBytes, tabNotationTracksKey]);
 
   useEffect(() => {
     if (!fileBytes || !isReady) return;
@@ -168,6 +201,7 @@ function App() {
     setNeckTracks([]);
     setAudioTracks([]);
     setCurrentMs(0);
+    setCurrentTick(0);
     setIsReady(false);
 
     try {
@@ -191,6 +225,9 @@ function App() {
       }
 
       setParseResult(result);
+      if (result.metadata.tempo) {
+        setPlaybackTempo(result.metadata.tempo);
+      }
       setFileBytes(bytes);
       setTotalMs(result.metadata.durationMs);
       setPractice((p) => ({
@@ -317,7 +354,8 @@ function App() {
               neckTracks.length > 0 && trackEvents.length > 0 ? (
                 <GuitarNeck
                   events={trackEvents}
-                  currentMs={currentMs}
+                  currentTick={currentTick}
+                  playbackTempo={playbackTempo}
                   displayMode={displayMode}
                   practice={practice}
                   stringCount={displayStringCount}
@@ -458,19 +496,77 @@ function App() {
                   <span>Display</span>
                   <button
                     type="button"
-                    className={displayMode === 'live' ? styles.modeActive : styles.modeBtn}
-                    onClick={() => setDisplayMode('live')}
+                    className={displayMode === 'standard' ? styles.modeActive : styles.modeBtn}
+                    onClick={() => setDisplayMode('standard')}
                   >
-                    Live Mode
+                    Standard
                   </button>
                   <button
                     type="button"
-                    className={displayMode === 'full' ? styles.modeActive : styles.modeBtn}
-                    onClick={() => setDisplayMode('full')}
+                    className={displayMode === 'trails' ? styles.modeActive : styles.modeBtn}
+                    onClick={() => setDisplayMode('trails')}
                   >
-                    Full Neck Mode
+                    Trails
                   </button>
                 </div>
+                {displayMode === 'trails' ? (
+                  <>
+                    <label className={styles.lookaheadRow}>
+                      <span className={styles.lookaheadLabel}>
+                        Future glow{' '}
+                        <strong>{practice.trailsPeakGlow}%</strong>
+                      </span>
+                      <input
+                        type="range"
+                        className={styles.lookaheadSlider}
+                        min={TRAILS_PEAK_GLOW_MIN}
+                        max={TRAILS_PEAK_GLOW_MAX}
+                        step={5}
+                        value={practice.trailsPeakGlow}
+                        onChange={(e) =>
+                          setPractice((p) => ({
+                            ...p,
+                            trailsPeakGlow: Number(e.target.value),
+                          }))
+                        }
+                        aria-label="How brightly upcoming Trails notes glow at the cue"
+                      />
+                      <span className={styles.lookaheadHints}>
+                        <span>subtle</span>
+                        <span>brilliant</span>
+                      </span>
+                    </label>
+                    <label className={styles.lookaheadRow}>
+                      <span className={styles.lookaheadLabel}>
+                        Start glowing{' '}
+                        <strong>{practice.trailsGlowLeadPercent}%</strong>
+                        <span className={styles.lookaheadSub}>
+                          {' '}
+                          of notes-ahead window
+                        </span>
+                      </span>
+                      <input
+                        type="range"
+                        className={styles.lookaheadSlider}
+                        min={TRAILS_GLOW_LEAD_MIN}
+                        max={TRAILS_GLOW_LEAD_MAX}
+                        step={5}
+                        value={practice.trailsGlowLeadPercent}
+                        onChange={(e) =>
+                          setPractice((p) => ({
+                            ...p,
+                            trailsGlowLeadPercent: Number(e.target.value),
+                          }))
+                        }
+                        aria-label="How early upcoming Trails notes begin to glow"
+                      />
+                      <span className={styles.lookaheadHints}>
+                        <span>just before cue</span>
+                        <span>earliest</span>
+                      </span>
+                    </label>
+                  </>
+                ) : null}
               </section>
             </div>
           ) : null}

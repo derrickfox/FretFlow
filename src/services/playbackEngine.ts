@@ -7,13 +7,22 @@
  * (getter returns this.loadedMidiInfo). Use playerReady instead.
  */
 
-import { synth, type AlphaTabApi } from '@coderline/alphatab';
+import { synth, type AlphaTabApi, type midi, type model } from '@coderline/alphatab';
 import { createTabPlayerApi } from './alphatabAdapter';
 
+export type PlaybackPosition = {
+  ms: number;
+  tick: number;
+  tempo: number;
+  isSeek: boolean;
+};
+
 export type PlaybackEngineCallbacks = {
-  onPosition?: (ms: number, isSeek: boolean) => void;
+  onPosition?: (position: PlaybackPosition) => void;
   onState?: (playing: boolean, ready: boolean) => void;
   onReady?: () => void;
+  /** Fired with the player's tick cache so fretboard events match the tab cursor */
+  onTimelineReady?: (tickLookup: midi.MidiTickLookup, score: model.Score) => void;
   onError?: (message: string) => void;
   onFinished?: () => void;
 };
@@ -23,6 +32,8 @@ export class PlaybackEngine {
   private callbacks: PlaybackEngineCallbacks = {};
   private totalMs = 0;
   private currentMsCached = 0;
+  private currentTickCached = 0;
+  private playbackTempoCached = 120;
   private loopStart = 0;
   private loopEnd = 0;
   private loopEnabled = false;
@@ -65,12 +76,24 @@ export class PlaybackEngine {
         /* use cached total from parse */
       }
       this.syncAudioTracks(this.audioTrackIndices);
+      const tickCache = api.tickCache;
+      const score = api.score;
+      if (tickCache && score) {
+        this.callbacks.onTimelineReady?.(tickCache, score);
+      }
       this.markSongReady();
     });
 
     api.playerPositionChanged.on((args) => {
       this.currentMsCached = args.currentTime;
-      this.callbacks.onPosition?.(args.currentTime, args.isSeek);
+      this.currentTickCached = args.currentTick;
+      this.playbackTempoCached = args.modifiedTempo;
+      this.callbacks.onPosition?.({
+        ms: args.currentTime,
+        tick: args.currentTick,
+        tempo: args.modifiedTempo,
+        isSeek: args.isSeek,
+      });
 
       if (
         this.loopEnabled &&
@@ -106,6 +129,17 @@ export class PlaybackEngine {
     this.callbacks.onState?.(this.isPlaying, true);
   }
 
+  /** Re-layout notation when the tab host gains size (alphaTab skips render at width 0). */
+  requestRender(): void {
+    const api = this.api;
+    if (!api?.score || this.isPlaying) return;
+    try {
+      api.render();
+    } catch {
+      /* render may defer until fonts load */
+    }
+  }
+
   loadFromBytes(
     data: Uint8Array,
     displayTrackIndexes: number[],
@@ -128,12 +162,22 @@ export class PlaybackEngine {
       this.currentMsCached = 0;
       this.callbacks.onState?.(false, false);
 
-      const ok = api.load(
-        data,
-        displayTrackIndexes.length > 0 ? displayTrackIndexes : undefined,
-      );
-      if (!ok) {
-        this.callbacks.onError?.('Unsupported file data for playback');
+      const loadTracks = () => {
+        const ok = api.load(
+          data,
+          displayTrackIndexes.length > 0 ? displayTrackIndexes : undefined,
+        );
+        if (!ok) {
+          this.callbacks.onError?.('Unsupported file data for playback');
+          return;
+        }
+        requestAnimationFrame(() => requestAnimationFrame(() => this.requestRender()));
+      };
+
+      if (host.clientWidth > 0) {
+        loadTracks();
+      } else {
+        requestAnimationFrame(() => requestAnimationFrame(loadTracks));
       }
     } catch (err) {
       this.callbacks.onError?.(
@@ -160,6 +204,14 @@ export class PlaybackEngine {
 
   getCurrentMs(): number {
     return this.currentMsCached;
+  }
+
+  getCurrentTick(): number {
+    return this.currentTickCached;
+  }
+
+  getPlaybackTempo(): number {
+    return this.playbackTempoCached;
   }
 
   get isReady(): boolean {
@@ -198,20 +250,24 @@ export class PlaybackEngine {
 
   playPause(): void {
     const api = this.api;
-    if (!api || !this.songReady) return;
+    if (!api || !this.songReady) {
+      if (!this.songReady) {
+        this.callbacks.onError?.(
+          'Player is not ready yet. Wait a moment after the file loads, then try Play again.',
+        );
+      }
+      return;
+    }
 
     if (api.playerState === synth.PlayerState.Playing) {
       this.pause();
       return;
     }
 
-    try {
-      const started = api.play();
-      this.callbacks.onState?.(started, this.songReady);
-    } catch {
-      this.callbacks.onError?.('Could not start playback.');
-      this.callbacks.onState?.(false, this.songReady);
-    }
+    void this.play().then((started) => {
+      if (!started) return;
+      this.callbacks.onState?.(true, this.songReady);
+    });
   }
 
   restart(): void {
@@ -220,7 +276,12 @@ export class PlaybackEngine {
     this.api.timePosition = this.loopEnabled ? this.loopStart : 0;
     this.currentMsCached = this.loopEnabled ? this.loopStart : 0;
     this.callbacks.onState?.(false, this.songReady);
-    this.callbacks.onPosition?.(this.currentMsCached, true);
+    this.callbacks.onPosition?.({
+      ms: this.currentMsCached,
+      tick: this.currentTickCached,
+      tempo: this.playbackTempoCached,
+      isSeek: true,
+    });
   }
 
   seek(ms: number): void {
@@ -245,11 +306,40 @@ export class PlaybackEngine {
     this.loopEnd = endMs;
   }
 
+  /** Stop synth output immediately (used on unload and before destroy). */
+  stopPlayback(): void {
+    const api = this.api;
+    if (!api) return;
+    try {
+      if (api.playerState === synth.PlayerState.Playing) {
+        api.pause();
+      }
+    } catch {
+      /* audio node may already be torn down */
+    }
+    try {
+      api.stop();
+    } catch {
+      /* ignore */
+    }
+  }
+
   destroy(): void {
-    this.api?.destroy();
+    const api = this.api;
+    if (api) {
+      this.stopPlayback();
+      try {
+        api.destroy();
+      } catch {
+        /* ignore teardown races on navigation */
+      }
+    }
     this.api = null;
     this.eventsWired = false;
     this.songReady = false;
+    this.currentMsCached = 0;
+    this.currentTickCached = 0;
+    this.callbacks.onState?.(false, false);
   }
 
   private emitState(playing?: boolean): void {
@@ -258,3 +348,19 @@ export class PlaybackEngine {
 }
 
 export const playbackEngine = new PlaybackEngine();
+
+// AI_CHANGE:
+// Tool: Cursor
+// Model: Composer
+// Timestamp: 2026-06-05T17:25:00-04:00
+// Purpose: Stop alphaTab audio when the tab navigates away or reloads.
+// Reason: React cleanup can run too late; the synth worklet kept playing after refresh.
+if (typeof window !== 'undefined') {
+  const w = window as Window & { __ffPlaybackTeardown?: boolean };
+  if (!w.__ffPlaybackTeardown) {
+    w.__ffPlaybackTeardown = true;
+    const stopOnLeave = () => playbackEngine.destroy();
+    window.addEventListener('pagehide', stopOnLeave);
+    window.addEventListener('beforeunload', stopOnLeave);
+  }
+}

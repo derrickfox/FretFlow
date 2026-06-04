@@ -1,9 +1,12 @@
 /**
  * Converts alphaTab Score objects into FretFlow's normalized GuitarNoteEvent timeline.
  * Guitar Pro tab data (string + fret) is the source of truth — not MIDI note numbers.
+ *
+ * Timing uses MidiTickLookup (synth ticks) so the neck follows player currentTick,
+ * the same clock as the tab cursor.
  */
 
-import type { model } from '@coderline/alphatab';
+import type { midi, model } from '@coderline/alphatab';
 import type { GuitarNoteEvent, ParseResult, SongMetadata, TrackInfo } from '../types/guitar';
 import {
   getScoreTempo,
@@ -15,36 +18,51 @@ import { fretToNoteName } from '../utils/noteHelpers';
 
 export type ParseOutcome = {
   result: ParseResult;
-  /** Retained for alphaTab playback — not passed to fretboard components */
   score: model.Score;
+  tickLookup: midi.MidiTickLookup;
 };
 
 export async function parseGuitarProFile(data: ArrayBuffer): Promise<ParseOutcome> {
   const bytes = new Uint8Array(data);
-  const score = loadScoreFromBytes(bytes);
-  return { result: buildParseResult(score), score };
+  const { score, tickLookup } = loadScoreFromBytes(bytes);
+  return { result: buildParseResult(score, tickLookup), score, tickLookup };
 }
 
-function buildParseResult(score: model.Score): ParseResult {
-  const tracks: TrackInfo[] = [];
-  const eventsByTrack = new Map<number, GuitarNoteEvent[]>();
+/** Rebuild note events when the player's tick cache is available (after playerReady). */
+export function refreshEventsFromTickCache(
+  result: ParseResult,
+  score: model.Score,
+  tickLookup: midi.MidiTickLookup,
+): ParseResult {
+  return buildParseResult(score, tickLookup, result.tracks);
+}
 
-  score.tracks.forEach((track, index) => {
-    const staff = track.staves[0];
-    const stringCount = staff?.tuning?.length ?? 6;
-    const kind = classifyTrackKind(track);
-    const info: TrackInfo = {
-      index,
-      name: track.name || `Track ${index + 1}`,
-      shortName: track.shortName || track.name || `T${index + 1}`,
-      kind,
-      isGuitar: kind === 'guitar',
-      isGuitarLike: kind === 'guitar' || kind === 'bass',
-      stringCount: Math.max(stringCount, 6),
-    };
-    tracks.push(info);
-    eventsByTrack.set(index, extractTrackEvents(score, track, index));
-  });
+function buildParseResult(
+  score: model.Score,
+  tickLookup: midi.MidiTickLookup,
+  existingTracks?: TrackInfo[],
+): ParseResult {
+  const tracks: TrackInfo[] =
+    existingTracks ??
+    score.tracks.map((track, index) => {
+      const staff = track.staves[0];
+      const stringCount = staff?.tuning?.length ?? 6;
+      const kind = classifyTrackKind(track);
+      return {
+        index,
+        name: track.name || `Track ${index + 1}`,
+        shortName: track.shortName || track.name || `T${index + 1}`,
+        kind,
+        isGuitar: kind === 'guitar',
+        isGuitarLike: kind === 'guitar' || kind === 'bass',
+        stringCount: Math.max(stringCount, 6),
+      };
+    });
+
+  const eventsByTrack = new Map<number, GuitarNoteEvent[]>();
+  for (const track of score.tracks) {
+    eventsByTrack.set(track.index, extractTrackEvents(track, track.index, tickLookup));
+  }
 
   const metadata: SongMetadata = {
     title: score.title || score.album || 'Untitled',
@@ -69,9 +87,9 @@ function computeDurationMs(eventsByTrack: Map<number, GuitarNoteEvent[]>): numbe
 }
 
 function extractTrackEvents(
-  score: model.Score,
   track: model.Track,
   trackIndex: number,
+  tickLookup: midi.MidiTickLookup,
 ): GuitarNoteEvent[] {
   const events: GuitarNoteEvent[] = [];
   const tuningMidi = getTrackTuningMidi(track);
@@ -87,40 +105,42 @@ function extractTrackEvents(
           const beat = beats[i];
           if (beat.isRest || beat.isEmpty) continue;
 
-          const startMs =
-            beat.absolutePlaybackStart != null
-              ? ticksToMs(beat.absolutePlaybackStart, score, beat)
-              : beat.timer ?? estimateStartMs(beat, score);
-          const nextBeat = beat.nextBeat ?? beats[i + 1] ?? null;
-          let durationMs = 120;
-          if (
-            nextBeat?.absolutePlaybackStart != null &&
-            beat.absolutePlaybackStart != null
-          ) {
-            durationMs = Math.max(
-              40,
-              ticksToMs(nextBeat.absolutePlaybackStart - beat.absolutePlaybackStart, score, beat),
-            );
-          } else if (nextBeat?.timer != null && beat.timer != null) {
-            durationMs = Math.max(40, nextBeat.timer - beat.timer);
-          } else if (beat.playbackDuration > 0) {
-            durationMs = ticksToMs(beat.playbackDuration, score, beat);
+          const startTick = tickLookup.getBeatStart(beat);
+          const range = tickLookup.getRelativeBeatPlaybackRange(beat);
+          let endTick = startTick + Math.max(beat.playbackDuration, 1);
+          if (range) {
+            const masterStart = tickLookup.getMasterBarStart(beat.voice.bar.masterBar);
+            endTick = masterStart + range.endTick;
+          } else {
+            const nextBeat = beat.nextBeat ?? beats[i + 1] ?? null;
+            if (nextBeat) {
+              const nextStart = tickLookup.getBeatStart(nextBeat);
+              if (nextStart > startTick) endTick = nextStart;
+            }
           }
+          if (endTick <= startTick) endTick = startTick + 1;
+
+          const startMs = beat.timer ?? 0;
+          const nextBeat = beat.nextBeat ?? beats[i + 1] ?? null;
+          const durationMs =
+            nextBeat?.timer != null && beat.timer != null
+              ? Math.max(40, nextBeat.timer - beat.timer)
+              : 120;
 
           for (const note of beat.notes) {
             if (!note.isStringed) continue;
             if (note.fret < 0) continue;
 
-            const id = `${trackIndex}-${idCounter++}`;
             events.push({
-              id,
+              id: `${trackIndex}-${idCounter++}`,
               trackIndex,
               string: note.string,
               fret: note.fret,
+              startTick,
+              endTick,
               startMs,
               durationMs,
               noteName: fretToNoteName(note.string, note.fret, tuningMidi),
-              velocity: undefined,
               measure,
             });
           }
@@ -129,20 +149,6 @@ function extractTrackEvents(
     }
   }
 
-  events.sort((a, b) => a.startMs - b.startMs || a.string - b.string);
+  events.sort((a, b) => a.startTick - b.startTick || a.string - b.string);
   return events;
-}
-
-function estimateStartMs(beat: model.Beat, score: model.Score): number {
-  const tick = beat.absolutePlaybackStart ?? beat.playbackStart ?? 0;
-  return ticksToMs(tick, score, beat);
-}
-
-function ticksToMs(ticks: number, score: model.Score, beat: model.Beat): number {
-  const tempo =
-    beat.voice.bar.masterBar.tempoAutomations[0]?.value ??
-    score.masterBars[0]?.tempoAutomations?.[0]?.value ??
-    120;
-  const tpq = 960;
-  return (ticks / tpq) * (60_000 / tempo);
 }

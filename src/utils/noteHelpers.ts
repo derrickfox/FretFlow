@@ -1,11 +1,16 @@
 // AI_CHANGE:
 // Tool: Cursor
 // Model: Composer
-// Timestamp: 2026-06-05T00:10:00-04:00
-// Purpose: Note time window driven by practice lookahead/linger sliders instead of fixed constants.
-// Reason: User-adjustable sliders control how far ahead notes preview and how long they stay after playing.
+// Timestamp: 2026-06-05T17:05:00-04:00
+// Purpose: Tick-based fretboard timing; extendWindowForSongStart; classify uses filter window only.
+// Reason: Ms/tick drift vs tab; tick 1 before play skipped preview; `ahead` typo broke Live mode.
+// Timestamp: 2026-06-05T18:00:00-04:00
+// Purpose: Standard vs Trails display modes with intensity ramp and smolder fade.
+// Reason: Trails needs progressive upcoming glow and orangy-red decay after notes play.
 
-import type { GuitarNoteEvent } from '../types/guitar';
+import type { DisplayMode, GuitarNoteEvent } from '../types/guitar';
+
+const QUARTER_TICKS = 960;
 
 /** Open-string MIDI (alphaTab string 1 = low E … 6 = high E). */
 const STANDARD_OPEN_MIDI: Record<number, number> = {
@@ -17,10 +22,11 @@ const STANDARD_OPEN_MIDI: Record<number, number> = {
   6: 64,
 };
 
-/**
- * Maps alphaTab string + fret to a note name using staff tuning (MIDI real value).
- * Falls back to standard 6-string tuning when tuning is unavailable.
- */
+export function millisToTicks(ms: number, tempoBpm: number): number {
+  if (ms <= 0 || tempoBpm <= 0) return 0;
+  return Math.round((ms * tempoBpm * QUARTER_TICKS) / 60_000);
+}
+
 export function fretToNoteName(
   stringIndex: number,
   fret: number,
@@ -54,43 +60,135 @@ export function visualRowToString(row: number, stringCount = 6): number {
   return stringCount - row;
 }
 
-export type NoteVisualState = 'active' | 'upcoming' | 'past' | 'full';
+export type NoteVisualState = 'active' | 'upcoming' | 'past' | 'full' | 'smolder';
+
+export type ClassifiedNote = {
+  state: NoteVisualState;
+  /** 0–1 strength for Trails ramp / smolder (1 = full brightness at cue or just played). */
+  intensity: number;
+};
+
+/** Trails upcoming ramp: peak brightness and how much of the ahead window glows. */
+export type TrailsGlowSettings = {
+  /** 0–1 brightness at the moment the note is played */
+  peakGlow: number;
+  /** 0–1 share of lookahead window where upcoming dots ramp in */
+  glowLeadRatio: number;
+};
+
+const TRAILS_FLOOR_GLOW = 0.08;
+
+function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+export function trailsGlowFromPractice(
+  peakPercent: number,
+  leadPercent: number,
+): TrailsGlowSettings {
+  return {
+    peakGlow: clamp01(peakPercent / 100),
+    glowLeadRatio: clamp01(leadPercent / 100),
+  };
+}
+
+/** Upcoming Trails intensity; null if outside the glow-lead zone. */
+function trailsUpcomingIntensity(
+  ticksUntil: number,
+  ahead: number,
+  glow: TrailsGlowSettings,
+): number | null {
+  const leadTicks = Math.max(1, Math.round(ahead * glow.glowLeadRatio));
+  if (ticksUntil > leadTicks) return null;
+  const ramp = 1 - ticksUntil / leadTicks;
+  const peak = glow.peakGlow;
+  return clamp01(TRAILS_FLOOR_GLOW + ramp * (peak - TRAILS_FLOOR_GLOW));
+}
 
 export function classifyNoteAtTime(
   note: GuitarNoteEvent,
-  currentMs: number,
-  mode: 'live' | 'full',
-  lookaheadMs: number,
-  lingerMs: number,
-): NoteVisualState | null {
-  const end = note.startMs + note.durationMs;
-  const ahead = Math.max(0, lookaheadMs);
-  const linger = Math.max(0, lingerMs);
-  const windowStart = currentMs - linger;
-
-  if (mode === 'full') {
-    const windowEnd = currentMs + ahead;
-    if (note.startMs > windowEnd) return null;
-    if (end < windowStart) return null;
-    if (currentMs >= note.startMs && currentMs < end) return 'active';
-    if (note.startMs > currentMs) return 'upcoming';
-    return 'full';
+  currentTick: number,
+  mode: DisplayMode,
+  lookaheadTicks: number,
+  lingerTicks: number,
+  trailsGlow?: TrailsGlowSettings,
+): ClassifiedNote | null {
+  if (mode === 'trails') {
+    const glow =
+      trailsGlow ?? trailsGlowFromPractice(100, 100);
+    return classifyNoteTrails(note, currentTick, lookaheadTicks, lingerTicks, glow);
   }
 
-  if (currentMs >= note.startMs && currentMs < end) return 'active';
-  if (note.startMs > currentMs && note.startMs <= currentMs + ahead) {
-    return 'upcoming';
+  if (currentTick >= note.startTick && currentTick < note.endTick) {
+    return { state: 'active', intensity: 1 };
   }
-  if (end <= currentMs && end >= windowStart) return 'full';
-  // At rest (start of song), preview the opening phrase so the neck is not empty
-  if (currentMs < 80 && note.startMs <= ahead) {
-    return 'upcoming';
+
+  if (note.startTick > currentTick) {
+    return { state: 'upcoming', intensity: 1 };
+  }
+  if (note.endTick <= currentTick && currentTick - note.endTick <= lingerTicks) {
+    return { state: 'full', intensity: 1 };
+  }
+  if (currentTick <= 0 && note.startTick <= lookaheadTicks) {
+    return { state: 'upcoming', intensity: 1 };
   }
   return null;
 }
 
-/** Events must be sorted by startMs. Returns notes that overlap [windowStart, windowEnd]. */
-export function filterEventsInTimeWindow(
+/** Trails: dim → bright as cue nears; ember orangy-red fade after played. */
+function classifyNoteTrails(
+  note: GuitarNoteEvent,
+  currentTick: number,
+  lookaheadTicks: number,
+  lingerTicks: number,
+  glow: TrailsGlowSettings,
+): ClassifiedNote | null {
+  const ahead = Math.max(lookaheadTicks, 1);
+  const linger = Math.max(lingerTicks, 1);
+
+  if (currentTick >= note.startTick && currentTick < note.endTick) {
+    return { state: 'active', intensity: 1 };
+  }
+
+  if (note.startTick > currentTick) {
+    const ticksUntil = note.startTick - currentTick;
+    const intensity = trailsUpcomingIntensity(ticksUntil, ahead, glow);
+    if (intensity == null) return null;
+    return { state: 'upcoming', intensity };
+  }
+
+  if (note.endTick <= currentTick) {
+    const ticksSince = currentTick - note.endTick;
+    if (ticksSince > linger) return null;
+    const fade = 1 - ticksSince / linger;
+    return { state: 'smolder', intensity: clamp01(fade) };
+  }
+
+  if (currentTick <= 0 && note.startTick <= ahead) {
+    const intensity = trailsUpcomingIntensity(note.startTick, ahead, glow);
+    if (intensity == null) return null;
+    return { state: 'upcoming', intensity };
+  }
+
+  return null;
+}
+
+/** Extend lookahead at the start so the first audible beat is inside the tick window. */
+export function extendWindowForSongStart(
+  window: { start: number; end: number },
+  currentTick: number,
+  firstNoteTick: number | undefined,
+  lookaheadTicks: number,
+): { start: number; end: number } {
+  if (firstNoteTick == null || firstNoteTick <= 0) return window;
+  // Player often reports tick 1 before play; keep the opening phrase visible until we reach it.
+  if (currentTick >= firstNoteTick) return window;
+  if (window.end >= firstNoteTick + lookaheadTicks) return window;
+  return { start: window.start, end: firstNoteTick + lookaheadTicks };
+}
+
+/** Events must be sorted by startTick. Returns notes that overlap [windowStart, windowEnd]. */
+export function filterEventsInTickWindow(
   events: GuitarNoteEvent[],
   windowStart: number,
   windowEnd: number,
@@ -101,29 +199,31 @@ export function filterEventsInTimeWindow(
   let hi = events.length;
   while (lo < hi) {
     const mid = (lo + hi) >> 1;
-    if (events[mid].startMs + events[mid].durationMs < windowStart) lo = mid + 1;
+    if (events[mid].endTick <= windowStart) lo = mid + 1;
     else hi = mid;
   }
 
   const result: GuitarNoteEvent[] = [];
   for (let i = lo; i < events.length; i++) {
     const note = events[i];
-    if (note.startMs > windowEnd) break;
-    if (note.startMs + note.durationMs >= windowStart) result.push(note);
+    if (note.startTick > windowEnd) break;
+    if (note.endTick > windowStart) result.push(note);
   }
   return result;
 }
 
-export function getPlaybackTimeWindow(
-  currentMs: number,
+export function getPlaybackTickWindow(
+  currentTick: number,
+  tempoBpm: number,
+  _mode: DisplayMode,
   lookaheadMs: number,
   lingerMs: number,
 ): { start: number; end: number } {
-  const ahead = Math.max(0, lookaheadMs);
-  const linger = Math.max(0, lingerMs);
+  const ahead = millisToTicks(lookaheadMs, tempoBpm);
+  const linger = millisToTicks(lingerMs, tempoBpm);
   return {
-    start: currentMs - linger,
-    end: currentMs + ahead,
+    start: currentTick - linger,
+    end: currentTick + ahead,
   };
 }
 

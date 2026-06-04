@@ -6,20 +6,22 @@
 // Reason: Overlapping dots with offset were cluttered; blended hue shows both tracks at once.
 
 import type { GuitarNoteEvent } from '../types/guitar';
-import type { NoteVisualState } from './noteHelpers';
+import type { ClassifiedNote, NoteVisualState } from './noteHelpers';
 
 export type MergedNeckDot = {
   id: string;
   string: number;
   fret: number;
   state: NoteVisualState;
+  intensity: number;
   trackIndices: number[];
   label?: string;
 };
 
 const STATE_RANK: Record<NoteVisualState, number> = {
-  active: 4,
-  upcoming: 3,
+  active: 5,
+  upcoming: 4,
+  smolder: 3,
   full: 2,
   past: 1,
 };
@@ -29,12 +31,13 @@ const STATE_RANK: Record<NoteVisualState, number> = {
  * (colors are blended separately in trackColors).
  */
 export function mergeNotesAtSameFret(
-  items: { note: GuitarNoteEvent; state: NoteVisualState }[],
+  items: { note: GuitarNoteEvent; classified: ClassifiedNote }[],
   showNoteNames: boolean,
 ): MergedNeckDot[] {
   const byFret = new Map<string, MergedNeckDot>();
 
-  for (const { note, state } of items) {
+  for (const { note, classified } of items) {
+    const { state, intensity } = classified;
     const key = `${note.string}-${note.fret}`;
     const existing = byFret.get(key);
 
@@ -44,6 +47,7 @@ export function mergeNotesAtSameFret(
         string: note.string,
         fret: note.fret,
         state,
+        intensity,
         trackIndices: [note.trackIndex],
         label: showNoteNames ? note.noteName : undefined,
       });
@@ -55,6 +59,9 @@ export function mergeNotesAtSameFret(
     }
     if (STATE_RANK[state] > STATE_RANK[existing.state]) {
       existing.state = state;
+      existing.intensity = intensity;
+    } else if (state === existing.state) {
+      existing.intensity = Math.max(existing.intensity, intensity);
     }
     if (showNoteNames && note.noteName) {
       const names = new Set((existing.label ?? '').split(' · ').filter(Boolean));

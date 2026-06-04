@@ -230,6 +230,12 @@
   font-weight: 600;
 }
 
+.lookaheadSub {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: rgba(160, 175, 210, 0.65);
+}
+
 .lookaheadSlider {
   width: 100%;
   accent-color: #5a8cff;

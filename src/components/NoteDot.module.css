@@ -8,7 +8,11 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  transition: opacity 0.15s ease, transform 0.12s ease, box-shadow 0.12s ease;
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    background 0.15s ease;
 }
 
 .custom.active {
@@ -40,11 +44,54 @@
   background: rgba(80, 80, 90, 0.4);
 }
 
+/* Trails: upcoming brightness ramps via --trail-intensity (0–1) */
+.trails.upcoming {
+  --trail-intensity: 0.35;
+  opacity: calc(0.14 + 0.86 * var(--trail-intensity));
+  background: radial-gradient(
+    circle at 35% 30%,
+    rgba(200, 220, 255, calc(0.35 + 0.45 * var(--trail-intensity))),
+    rgba(90, 140, 220, calc(0.25 + 0.35 * var(--trail-intensity))) 55%,
+    rgba(60, 90, 160, 0.35)
+  );
+  border: 1px solid rgba(160, 200, 255, calc(0.25 + 0.55 * var(--trail-intensity)));
+  box-shadow:
+    0 0 calc(2px + 16px * var(--trail-intensity)) rgba(120, 170, 255, calc(0.2 + 0.65 * var(--trail-intensity))),
+    inset 0 0 calc(4px * var(--trail-intensity)) rgba(255, 255, 255, 0.35);
+  animation: none;
+}
+
+.trails.active {
+  animation: pulse 0.55s ease-in-out infinite alternate;
+}
+
+/* Trails: ember smolder after the note is played */
+.trails.smolder {
+  --trail-intensity: 0.5;
+  opacity: calc(0.2 + 0.75 * var(--trail-intensity));
+  background: radial-gradient(
+    circle at 40% 35%,
+    rgba(255, 200, 120, calc(0.5 + 0.4 * var(--trail-intensity))),
+    rgba(230, 90, 40, calc(0.45 + 0.35 * var(--trail-intensity))) 45%,
+    rgba(120, 30, 20, calc(0.35 + 0.25 * var(--trail-intensity))) 80%
+  );
+  border: 1px solid rgba(200, 80, 40, calc(0.25 + 0.45 * var(--trail-intensity)));
+  box-shadow:
+    0 0 calc(2px + 14px * var(--trail-intensity)) rgba(220, 70, 30, calc(0.25 + 0.5 * var(--trail-intensity))),
+    inset 0 0 calc(6px * var(--trail-intensity)) rgba(255, 160, 80, 0.4);
+  z-index: 2;
+  animation: smolder 0.8s ease-in-out infinite alternate;
+}
+
 .label {
   font-size: 0.55rem;
   font-weight: 700;
   color: #1a1a22;
   line-height: 1;
+}
+
+.trails.smolder .label {
+  color: rgba(40, 12, 8, 0.9);
 }
 
 .leftHanded {
@@ -57,5 +104,16 @@
   }
   to {
     transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+
+@keyframes smolder {
+  from {
+    transform: translate(-50%, -50%) scale(1);
+    filter: brightness(1);
+  }
+  to {
+    transform: translate(-50%, -50%) scale(0.94);
+    filter: brightness(0.82);
   }
 }

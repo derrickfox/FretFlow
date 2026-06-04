@@ -43,6 +43,17 @@
   font-weight: 600;
 }
 
+/* AI_CHANGE:
+   Tool: Cursor
+   Model: Composer
+   Timestamp: 2026-06-05T00:40:00-04:00
+   Purpose: Wrap string rows + notes overlay in one box so dot % top matches string centers.
+   Reason: Fixed top/bottom on notesLayer caused vertical drift on lower strings.
+*/
+.stringsBlock {
+  position: relative;
+}
+
 .stringRow {
   display: grid;
   grid-template-columns: 3.25rem 1fr;
@@ -122,8 +133,8 @@
   position: absolute;
   left: 3.25rem;
   right: 0.5rem;
-  top: 1.6rem;
-  bottom: 0.35rem;
+  top: 0;
+  bottom: 0;
   pointer-events: none;
   z-index: 4;
 }

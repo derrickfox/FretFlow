@@ -1,32 +1,55 @@
 import type { CSSProperties } from 'react';
+import type { DisplayMode } from '../types/guitar';
 import type { NoteVisualState } from '../utils/noteHelpers';
 import type { TrackNoteColors } from '../utils/trackColors';
 import styles from './NoteDot.module.css';
 
 type NoteDotProps = {
   state: NoteVisualState;
+  intensity?: number;
+  displayMode?: DisplayMode;
   label?: string;
   leftHanded?: boolean;
   colors?: TrackNoteColors;
 };
 
-export function NoteDot({ state, label, leftHanded, colors }: NoteDotProps) {
+export function NoteDot({
+  state,
+  intensity = 1,
+  displayMode = 'standard',
+  label,
+  leftHanded,
+  colors,
+}: NoteDotProps) {
+  const trails = displayMode === 'trails';
   const classNames = [
     styles.dot,
-    colors ? styles.custom : '',
+    colors && state !== 'smolder' && state !== 'past' ? styles.custom : '',
+    trails ? styles.trails : '',
     styles[state],
     leftHanded ? styles.leftHanded : '',
   ]
     .filter(Boolean)
     .join(' ');
 
-  const customStyle =
-    colors && state !== 'past'
-      ? stateStyle(state, colors)
+  const trailStyle =
+    trails && state !== 'full'
+      ? ({ '--trail-intensity': String(intensity) } as CSSProperties)
       : undefined;
 
+  const customStyle =
+    colors && state !== 'past' && state !== 'smolder'
+      ? { ...stateStyle(state, colors, intensity, trails), ...trailStyle }
+      : trailStyle;
+
   return (
-    <div className={classNames} style={customStyle} title={label}>
+    <div
+      className={classNames}
+      style={customStyle}
+      title={label}
+      data-note-state={state}
+      data-display-mode={displayMode}
+    >
       {label ? <span className={styles.label}>{label}</span> : null}
     </div>
   );
@@ -35,19 +58,26 @@ export function NoteDot({ state, label, leftHanded, colors }: NoteDotProps) {
 function stateStyle(
   state: NoteVisualState,
   colors: TrackNoteColors,
+  intensity: number,
+  trails: boolean,
 ): CSSProperties | undefined {
+  const i = trails ? intensity : 1;
   switch (state) {
     case 'active':
       return {
         background: colors.activeBg,
         boxShadow: colors.activeShadow,
+        opacity: trails ? 1 : undefined,
         zIndex: 3,
       };
     case 'upcoming':
       return {
         background: colors.upcomingBg,
         border: `1px solid ${colors.upcomingBorder}`,
-        opacity: 0.55,
+        opacity: trails ? 0.15 + i * 0.85 : 0.55,
+        boxShadow: trails
+          ? `0 0 ${4 + 14 * i}px rgba(120, 170, 255, ${0.15 + 0.55 * i})`
+          : undefined,
         zIndex: 2,
       };
     case 'full':

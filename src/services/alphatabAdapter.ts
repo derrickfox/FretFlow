@@ -43,6 +43,13 @@ export function createTabPlayerSettings(
   return {
     core: {
       fontDirectory: ALPHATAB_FONT_DIR,
+      // AI_CHANGE:
+      // Tool: Cursor
+      // Model: Composer
+      // Timestamp: 2026-06-05T17:10:00-04:00
+      // Purpose: Disable lazy partial loading inside our scroll panel.
+      // Reason: IntersectionObserver never painted rows — blank TAB with only cursor bars.
+      enableLazyLoading: false,
     },
     player: {
       enablePlayer: true,
@@ -77,10 +84,16 @@ export function createTabPlayerSettings(
   };
 }
 
+export type ScoreLoadResult = {
+  score: model.Score;
+  /** Same tick timeline the synth player uses for the cursor */
+  tickLookup: midi.MidiTickLookup;
+};
+
 /**
- * Loads and finishes a score, then runs MIDI generation so beat.timer values are populated.
+ * Loads and finishes a score, then runs MIDI generation to build the tick lookup table.
  */
-export function loadScoreFromBytes(data: Uint8Array): model.Score {
+export function loadScoreFromBytes(data: Uint8Array): ScoreLoadResult {
   const settings = createAlphaTabSettings();
   let score: model.Score;
   try {
@@ -103,7 +116,7 @@ export function loadScoreFromBytes(data: Uint8Array): model.Score {
   const handler = new midi.AlphaSynthMidiFileHandler(midiFile);
   const generator = new midi.MidiFileGenerator(score, settings, handler);
   generator.generate();
-  return score;
+  return { score, tickLookup: generator.tickLookup };
 }
 
 /** Ensures beat.timer (ms) is populated for tab→timeline conversion (GP files often omit timers). */
