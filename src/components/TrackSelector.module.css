@@ -1,0 +1,151 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.label {
+  font-size: 0.8rem;
+  color: rgba(180, 190, 220, 0.85);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: rgba(160, 175, 210, 0.7);
+}
+
+.legendIcon {
+  width: 14px;
+  height: 14px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 11rem;
+  overflow-y: auto;
+  border: 1px solid rgba(100, 120, 180, 0.25);
+  border-radius: 8px;
+  background: rgba(18, 22, 36, 0.6);
+}
+
+.trackRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid rgba(80, 100, 150, 0.12);
+}
+
+.list li:last-child .trackRow {
+  border-bottom: none;
+}
+
+.trackRow:hover {
+  background: rgba(50, 65, 110, 0.25);
+}
+
+.toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid rgba(100, 120, 180, 0.35);
+  background: rgba(30, 36, 56, 0.9);
+  color: rgba(150, 165, 200, 0.55);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.iconBtn:hover {
+  border-color: rgba(140, 170, 255, 0.55);
+  color: rgba(200, 210, 240, 0.9);
+}
+
+.iconBtnOn {
+  color: #f5c66a;
+  border-color: rgba(245, 198, 106, 0.55);
+  background: rgba(80, 65, 30, 0.45);
+  box-shadow: 0 0 8px rgba(245, 185, 66, 0.25);
+}
+
+.iconBtnAudio.iconBtnOn {
+  color: #9ec5ff;
+  border-color: rgba(120, 170, 255, 0.55);
+  background: rgba(40, 55, 100, 0.55);
+  box-shadow: 0 0 8px rgba(90, 140, 255, 0.25);
+}
+
+.trackInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.trackNameRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.colorSwatch {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.2);
+}
+
+.trackName {
+  font-size: 0.88rem;
+  color: #e8ecf8;
+  line-height: 1.25;
+}
+
+.trackMeta {
+  font-size: 0.72rem;
+  color: rgba(160, 175, 210, 0.75);
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: rgba(255, 176, 122, 0.9);
+}
+
+.empty {
+  color: #ffb07a;
+  font-size: 0.9rem;
+  margin: 0;
+}

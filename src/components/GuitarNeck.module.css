@@ -1,0 +1,145 @@
+.wrapper {
+  width: 100%;
+  overflow-x: auto;
+  padding: 0.5rem 0 1rem;
+}
+
+.neck {
+  --string-count: 6;
+  --fret-count: 25;
+  width: 100%;
+  position: relative;
+  background: linear-gradient(180deg, #3d2817 0%, #2a1a0f 40%, #1f140c 100%);
+  border-radius: 12px;
+  border: 2px solid #5a4030;
+  box-shadow: inset 0 2px 24px rgba(0, 0, 0, 0.45), 0 8px 32px rgba(0, 0, 0, 0.35);
+  padding: 0.35rem 0.5rem 0.75rem 0;
+}
+
+.leftHanded {
+  direction: rtl;
+}
+
+.leftHanded .stringLabel {
+  direction: ltr;
+}
+
+.fretNumbers {
+  display: grid;
+  grid-template-columns: 3.25rem repeat(var(--fret-count), 1fr);
+  gap: 0;
+  margin-bottom: 0.25rem;
+  padding-left: 0.25rem;
+}
+
+.corner {
+  min-height: 1rem;
+}
+
+.fretNumber {
+  text-align: center;
+  font-size: 0.65rem;
+  color: rgba(220, 200, 170, 0.65);
+  font-weight: 600;
+}
+
+.stringRow {
+  display: grid;
+  grid-template-columns: 3.25rem 1fr;
+  align-items: stretch;
+  position: relative;
+}
+
+.stringRow::after {
+  content: '';
+  position: absolute;
+  left: 3.25rem;
+  right: 0.5rem;
+  top: 50%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, silver 8%, #c8c8d0 50%, silver 92%, transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.stringLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #e8dcc8;
+  padding-right: 0.35rem;
+}
+
+.fretCells {
+  display: grid;
+  grid-template-columns: repeat(var(--fret-count), 1fr);
+  min-height: 2.4rem;
+  position: relative;
+  z-index: 1;
+}
+
+.cell {
+  position: relative;
+  border-right: 2px solid rgba(90, 70, 50, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nut {
+  border-right: 5px solid #e8e0d0;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.markerFret {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.fretDot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: rgba(220, 210, 190, 0.35);
+}
+
+.doubleDot {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.doubleDot::before,
+.doubleDot::after {
+  content: '';
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: rgba(220, 210, 190, 0.35);
+}
+
+.notesLayer {
+  position: absolute;
+  left: 3.25rem;
+  right: 0.5rem;
+  top: 1.6rem;
+  bottom: 0.35rem;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.notePosition {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+@media (max-width: 768px) {
+  .neck {
+    min-width: 100%;
+  }
+
+  .fretNumber {
+    font-size: 0.55rem;
+  }
+}

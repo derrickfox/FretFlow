@@ -1,0 +1,42 @@
+.panel {
+  background: rgba(28, 34, 52, 0.85);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(100, 120, 180, 0.2);
+}
+
+.title {
+  margin: 0 0 0.25rem;
+  font-size: 1.25rem;
+  color: #f0f4ff;
+}
+
+.artist {
+  margin: 0 0 0.75rem;
+  color: rgba(190, 200, 230, 0.8);
+  font-size: 0.95rem;
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.meta dt {
+  color: rgba(150, 165, 200, 0.85);
+  font-weight: 600;
+}
+
+.meta dd {
+  margin: 0;
+  color: #dce6ff;
+}
+
+.placeholder {
+  margin: 0;
+  color: rgba(160, 175, 210, 0.7);
+  font-size: 0.9rem;
+}

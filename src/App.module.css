@@ -1,0 +1,285 @@
+.app {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at top, #1a2038 0%, #0e1018 55%);
+  color: #e8ecf8;
+}
+
+/* AI_CHANGE:
+   Tool: Cursor
+   Model: Composer
+   Timestamp: 2026-06-04T20:30:00-04:00
+   Purpose: Header row with branding left and compact file upload on the right.
+   Reason: User requested moving the dropzone out of the controls panel into the header.
+*/
+.header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem 1.5rem;
+  padding: 1rem 1.5rem;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+  border-bottom: 1px solid rgba(100, 120, 180, 0.15);
+}
+
+.headerBrand {
+  justify-self: start;
+  min-width: 0;
+}
+
+.headerCenter {
+  justify-self: center;
+  width: min(100%, 300px);
+}
+
+.headerUpload {
+  justify-self: end;
+  width: min(100%, 300px);
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .header {
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+  }
+
+  .headerBrand,
+  .headerCenter,
+  .headerUpload {
+    justify-self: stretch;
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.logo {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(120deg, #9ec5ff, #f5c66a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.tagline {
+  margin: 0.2rem 0 0;
+  color: rgba(180, 190, 220, 0.75);
+  font-size: 0.95rem;
+}
+
+/* AI_CHANGE:
+   Tool: Cursor
+   Model: Composer
+   Timestamp: 2026-06-04T20:00:00-04:00
+   Purpose: Stack layout — full-width fretboard on top, controls in a grid below.
+   Reason: Side-by-side grid squeezed the neck; vertical layout uses the full viewport width.
+*/
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem 1.25rem 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* AI_CHANGE:
+   Tool: Cursor
+   Model: Composer
+   Timestamp: 2026-06-04T23:55:00-04:00
+   Purpose: Tighter padding on sticky playback dock after compact control layout.
+   Reason: Icon-based single-row bar needs less vertical space than stacked sliders.
+*/
+.playbackDock {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  margin: -0.25rem 0 0;
+  padding: 0.45rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid rgba(100, 120, 180, 0.35);
+  background: rgba(18, 22, 38, 0.94);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+}
+
+.stage {
+  width: 100%;
+}
+
+.stageStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: 100%;
+}
+
+/* AI_CHANGE:
+   Tool: Cursor
+   Model: Composer
+   Timestamp: 2026-06-04T20:15:00-04:00
+   Purpose: Two-row control layout — upload/track/info on top, playback/practice below.
+   Reason: auto-fit grid left a lone checkbox in the center column with empty space around it.
+*/
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.controlsTop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.controlsTop > * {
+  min-width: 0;
+}
+
+.trackPanel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.75rem;
+  background: rgba(28, 34, 52, 0.7);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(100, 120, 180, 0.2);
+}
+
+.trackPanel .checkbox {
+  margin: 0;
+}
+
+.controlsBottom {
+  display: block;
+}
+
+@media (max-width: 960px) {
+  .controlsTop {
+    grid-template-columns: 1fr;
+  }
+}
+
+.emptyStage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 360px;
+  border: 1px dashed rgba(120, 140, 200, 0.25);
+  border-radius: 12px;
+  color: rgba(160, 175, 210, 0.7);
+  padding: 2rem;
+  text-align: center;
+}
+
+.practice {
+  background: rgba(28, 34, 52, 0.7);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(100, 120, 180, 0.2);
+}
+
+.sectionTitle {
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(160, 175, 210, 0.9);
+}
+
+.toggleGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #c8d4f0;
+}
+
+.toggleGrid label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.lookaheadRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: #c8d4f0;
+  cursor: default;
+}
+
+.lookaheadLabel {
+  color: #b8c8f0;
+}
+
+.lookaheadLabel strong {
+  color: #e8eeff;
+  font-weight: 600;
+}
+
+.lookaheadSlider {
+  width: 100%;
+  accent-color: #5a8cff;
+}
+
+.lookaheadHints {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: rgba(160, 175, 210, 0.65);
+}
+
+.modeRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: #b8c8f0;
+}
+
+.modeBtn,
+.modeActive {
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid rgba(100, 120, 180, 0.4);
+  background: #222838;
+  color: #b8c8f0;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.modeActive {
+  background: #3a5088;
+  border-color: #6af;
+  color: #fff;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #c0cce8;
+}
+
+.playbackError {
+  color: #ff9a9a;
+  font-size: 0.85rem;
+  margin: 0;
+}
+

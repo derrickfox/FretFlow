@@ -1,0 +1,74 @@
+.section {
+  margin-bottom: 1rem;
+}
+
+.sectionCompact {
+  margin-bottom: 0;
+}
+
+.dropzone {
+  border: 2px dashed rgba(140, 160, 220, 0.45);
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  background: rgba(30, 36, 58, 0.6);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.dropzone:hover,
+.dragOver {
+  border-color: rgba(120, 180, 255, 0.75);
+  background: rgba(40, 50, 80, 0.75);
+}
+
+.loading {
+  cursor: wait;
+  opacity: 0.85;
+}
+
+.dropzoneCompact {
+  padding: 0.65rem 1rem;
+  text-align: left;
+}
+
+.dropzoneCompact .primary {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.formatsCompact {
+  margin: 0.35rem 0 0;
+  font-size: 0.7rem;
+  color: rgba(160, 175, 210, 0.65);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.primary {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #e8ecf8;
+}
+
+.secondary {
+  margin: 0;
+  color: rgba(200, 210, 235, 0.7);
+  font-size: 0.9rem;
+}
+
+.formats {
+  margin: 0.75rem 0 0;
+  font-size: 0.75rem;
+  color: rgba(160, 175, 210, 0.65);
+}
+
+.error {
+  margin: 0.65rem 0 0;
+  color: #ff8a8a;
+  font-size: 0.9rem;
+}

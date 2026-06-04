@@ -1,0 +1,61 @@
+.dot {
+  position: absolute;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.custom.active {
+  animation: pulse 0.55s ease-in-out infinite alternate;
+}
+
+.active {
+  background: radial-gradient(circle at 35% 30%, #fff6c4, #f5b942 55%, #d48812);
+  box-shadow: 0 0 12px rgba(245, 185, 66, 0.85), 0 0 2px #fff;
+  z-index: 3;
+  animation: pulse 0.55s ease-in-out infinite alternate;
+}
+
+.upcoming {
+  background: rgba(120, 170, 255, 0.45);
+  border: 1px solid rgba(160, 200, 255, 0.6);
+  opacity: 0.55;
+  z-index: 2;
+}
+
+.full {
+  background: rgba(90, 130, 200, 0.35);
+  border: 1px solid rgba(120, 160, 220, 0.45);
+  z-index: 1;
+}
+
+.past {
+  opacity: 0.15;
+  background: rgba(80, 80, 90, 0.4);
+}
+
+.label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: #1a1a22;
+  line-height: 1;
+}
+
+.leftHanded {
+  /* Position handled by parent; class reserved for future tweaks */
+}
+
+@keyframes pulse {
+  from {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}

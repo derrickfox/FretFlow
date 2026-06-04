@@ -1,0 +1,33 @@
+.wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  background: #0e1018;
+  color: #e8ecf8;
+  text-align: center;
+}
+
+.wrap h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.wrap p {
+  max-width: 32rem;
+  color: #ff9a9a;
+  font-size: 0.95rem;
+}
+
+.wrap button {
+  background: #3a5088;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 1.1rem;
+  cursor: pointer;
+  font-weight: 600;
+}
