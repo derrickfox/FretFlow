@@ -31,6 +31,14 @@ export function isStandardTuning(tuningTopToBottom: number[]): boolean {
   );
 }
 
+/** Human-readable open-string notes top → bottom (e.g. for tuning badges). */
+export function formatTuningDetail(
+  tuningTopToBottom: number[],
+  stringCount: number,
+): string {
+  return neckStringLabels(tuningTopToBottom, stringCount).join(' · ');
+}
+
 /** Labels top → bottom for the neck (matches STANDARD_TUNING reversed). */
 export function neckStringLabels(tuningTopToBottom: number[], stringCount: number): string[] {
   const labels: string[] = [];

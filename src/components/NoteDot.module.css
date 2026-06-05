@@ -19,6 +19,31 @@
   animation: pulse 0.55s ease-in-out infinite alternate;
 }
 
+/* AI_CHANGE:
+   Tool: Cursor
+   Model: Composer
+   Timestamp: 2026-06-05T14:00:00-04:00
+   Purpose: Custom picker colors paint through CSS variables with !important.
+   Reason: State classes and background:none resets were hiding upcoming dots and smolder borders. */
+.customColors {
+  background: var(--dot-fill) !important;
+  border: 1px solid var(--dot-border, transparent) !important;
+  box-shadow: var(--dot-shadow, none) !important;
+  opacity: var(--dot-opacity, 1) !important;
+  /* Skip fill/shadow transitions so active red does not bleed into linger borders. */
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+}
+
+.customActive {
+  animation: pulse 0.55s ease-in-out infinite alternate;
+}
+
+.customSmolderAnim {
+  animation: smolder 0.8s ease-in-out infinite alternate;
+}
+
 .active {
   background: radial-gradient(circle at 35% 30%, #fff6c4, #f5b942 55%, #d48812);
   box-shadow: 0 0 12px rgba(245, 185, 66, 0.85), 0 0 2px #fff;

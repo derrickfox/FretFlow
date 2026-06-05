@@ -6,7 +6,8 @@ type SongInfoPanelProps = {
   trackName?: string;
   noteCount?: number;
   capoFret?: number;
-  tuningLabel?: string;
+  tuningHeadline?: string;
+  tuningDetail?: string;
 };
 
 export function SongInfoPanel({
@@ -14,7 +15,8 @@ export function SongInfoPanel({
   trackName,
   noteCount,
   capoFret,
-  tuningLabel,
+  tuningHeadline,
+  tuningDetail,
 }: SongInfoPanelProps) {
   if (!metadata) {
     return (
@@ -53,10 +55,18 @@ export function SongInfoPanel({
             <dd>Fret {capoFret}</dd>
           </>
         ) : null}
-        {tuningLabel ? (
+        {tuningHeadline ? (
           <>
             <dt>Tuning</dt>
-            <dd>{tuningLabel}</dd>
+            <dd>
+              {tuningHeadline}
+              {tuningDetail ? (
+                <>
+                  <br />
+                  <span className={styles.tuningDetail}>{tuningDetail}</span>
+                </>
+              ) : null}
+            </dd>
           </>
         ) : null}
       </dl>

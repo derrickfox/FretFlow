@@ -181,11 +181,31 @@
   text-align: center;
 }
 
+/* AI_CHANGE:
+   Tool: Cursor
+   Model: Composer
+   Timestamp: 2026-06-05T12:45:00-04:00
+   Purpose: Side-by-side practice controls and animated neck preview widget.
+   Reason: User can see ahead/linger/trails settings on sample notes while adjusting sliders. */
 .practice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 42%);
+  gap: 1rem;
+  align-items: start;
   background: rgba(28, 34, 52, 0.7);
   border-radius: 10px;
   padding: 0.85rem 1rem;
   border: 1px solid rgba(100, 120, 180, 0.2);
+}
+
+.practiceControls {
+  min-width: 0;
+}
+
+@media (max-width: 960px) {
+  .practice {
+    grid-template-columns: 1fr;
+  }
 }
 
 .sectionTitle {
@@ -273,6 +293,43 @@
   background: #3a5088;
   border-color: #6af;
   color: #fff;
+}
+
+/* AI_CHANGE:
+   Tool: Cursor
+   Model: Composer
+   Timestamp: 2026-06-05T16:00:00-04:00
+   Purpose: Trails-only color pickers in a vertical stack.
+   Reason: User wants pickers only in Trails mode, laid out vertically. */
+.colorPickers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+  padding: 0.5rem 0.55rem;
+  border-radius: 8px;
+  background: rgba(18, 22, 36, 0.55);
+  border: 1px solid rgba(100, 120, 180, 0.22);
+}
+
+.colorPicker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  font-size: 0.8rem;
+  color: #c8d4f0;
+  cursor: pointer;
+}
+
+.colorPicker input[type='color'] {
+  width: 2rem;
+  height: 1.65rem;
+  padding: 0;
+  border: 1px solid rgba(120, 140, 200, 0.45);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
 }
 
 .checkbox {

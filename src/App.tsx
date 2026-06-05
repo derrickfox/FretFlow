@@ -5,6 +5,7 @@ import { getPreloadedSong, PRELOADED_SONGS } from './data/preloadedSongs';
 import { TrackSelector } from './components/TrackSelector';
 import { PlaybackControls } from './components/PlaybackControls';
 import { GuitarNeck } from './components/GuitarNeck';
+import { PracticeNeckPreview } from './components/PracticeNeckPreview';
 import { TabViewer } from './components/TabViewer';
 import { SongInfoPanel } from './components/SongInfoPanel';
 import { parseGuitarProFile, refreshEventsFromTickCache } from './services/guitarProParser';
@@ -26,7 +27,7 @@ import {
   TRAILS_PEAK_GLOW_MAX,
   TRAILS_PEAK_GLOW_MIN,
 } from './types/guitar';
-import { isStandardTuning, neckStringLabels } from './utils/stringTuning';
+import { formatTuningDetail, isStandardTuning } from './utils/stringTuning';
 import styles from './App.module.css';
 
 function App() {
@@ -86,7 +87,13 @@ function App() {
 
   const neckDisplay = useMemo(() => {
     if (!parseResult || neckTracks.length === 0) {
-      return { capoFret: 0, tuningMidi: undefined as number[] | undefined, tuningName: undefined as string | undefined };
+      return {
+        capoFret: 0,
+        tuningMidi: undefined as number[] | undefined,
+        tuningName: undefined as string | undefined,
+        tuningHeadline: undefined as string | undefined,
+        tuningDetail: undefined as string | undefined,
+      };
     }
     const visible = neckTracks
       .map((index) => parseResult.tracks.find((t) => t.index === index))
@@ -95,16 +102,18 @@ function App() {
       visible.find((t) => t.isGuitar) ?? visible[0];
     const capoFret = Math.max(0, ...visible.map((t) => t.capo ?? 0));
     const tuningMidi = primary?.tuningMidi?.length ? primary.tuningMidi : undefined;
-    const tuningLabel =
-      tuningMidi && !isStandardTuning(tuningMidi)
-        ? primary?.tuningName?.trim() ||
-          neckStringLabels(tuningMidi, primary?.stringCount ?? 6).join(' · ')
+    const stringCount = primary?.stringCount ?? 6;
+    const standard = tuningMidi ? isStandardTuning(tuningMidi) : true;
+    const tuningDetail =
+      tuningMidi && !standard
+        ? primary?.tuningName?.trim() || formatTuningDetail(tuningMidi, stringCount)
         : undefined;
     return {
       capoFret,
       tuningMidi,
       tuningName: primary?.tuningName,
-      tuningLabel,
+      tuningHeadline: tuningMidi ? (standard ? 'Standard' : 'Alternate tuning') : undefined,
+      tuningDetail,
     };
   }, [parseResult, neckTracks]);
 
@@ -421,7 +430,8 @@ function App() {
                 trackName={selectedTracksLabel}
                 noteCount={trackEvents.length}
                 capoFret={neckDisplay.capoFret}
-                tuningLabel={neckDisplay.tuningLabel}
+                tuningHeadline={neckDisplay.tuningHeadline}
+                tuningDetail={neckDisplay.tuningDetail}
               />
               <div className={styles.trackPanel}>
                 <TrackSelector
@@ -439,6 +449,7 @@ function App() {
           {parseResult ? (
             <div className={styles.controlsBottom}>
               <section className={styles.practice}>
+                <div className={styles.practiceControls}>
                 <h3 className={styles.sectionTitle}>Practice</h3>
                 <div className={styles.toggleGrid}>
                   <label>
@@ -551,6 +562,50 @@ function App() {
                 </div>
                 {displayMode === 'trails' ? (
                   <>
+                    <div className={styles.colorPickers}>
+                      <label className={styles.colorPicker}>
+                        <span>Upcoming</span>
+                        <input
+                          type="color"
+                          value={practice.noteColorUpcoming}
+                          onChange={(e) =>
+                            setPractice((p) => ({
+                              ...p,
+                              noteColorUpcoming: e.target.value,
+                            }))
+                          }
+                          aria-label="Color for upcoming notes"
+                        />
+                      </label>
+                      <label className={styles.colorPicker}>
+                        <span>Playing</span>
+                        <input
+                          type="color"
+                          value={practice.noteColorActive}
+                          onChange={(e) =>
+                            setPractice((p) => ({
+                              ...p,
+                              noteColorActive: e.target.value,
+                            }))
+                          }
+                          aria-label="Color for currently playing notes"
+                        />
+                      </label>
+                      <label className={styles.colorPicker}>
+                        <span>Just played</span>
+                        <input
+                          type="color"
+                          value={practice.noteColorPlayed}
+                          onChange={(e) =>
+                            setPractice((p) => ({
+                              ...p,
+                              noteColorPlayed: e.target.value,
+                            }))
+                          }
+                          aria-label="Color for notes just played"
+                        />
+                      </label>
+                    </div>
                     <label className={styles.lookaheadRow}>
                       <span className={styles.lookaheadLabel}>
                         Future glow{' '}
@@ -607,6 +662,8 @@ function App() {
                     </label>
                   </>
                 ) : null}
+                </div>
+                <PracticeNeckPreview practice={practice} displayMode={displayMode} />
               </section>
             </div>
           ) : null}

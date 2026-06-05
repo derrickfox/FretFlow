@@ -13,6 +13,9 @@ type NoteDotProps = {
   label?: string;
   leftHanded?: boolean;
   colors?: TrackNoteColors;
+  /** User color picker styles override track hues when enabled. */
+  useCustomColors?: boolean;
+  customStyle?: CSSProperties;
   bend?: NoteBendInfo;
 };
 
@@ -23,36 +26,45 @@ export function NoteDot({
   label,
   leftHanded,
   colors,
+  useCustomColors = false,
+  customStyle,
   bend,
 }: NoteDotProps) {
   const trails = displayMode === 'trails';
   const classNames = [
     styles.dot,
-    colors && state !== 'smolder' && state !== 'past' ? styles.custom : '',
-    trails ? styles.trails : '',
+    useCustomColors ? styles.customColors : '',
+    useCustomColors && state === 'active' ? styles.customActive : '',
+    useCustomColors && state === 'smolder' && trails ? styles.customSmolderAnim : '',
+    !useCustomColors && colors && state !== 'past' ? styles.custom : '',
+    !useCustomColors && trails ? styles.trails : '',
+    !useCustomColors ? styles[state] : '',
     bend ? styles.hasBend : '',
-    styles[state],
     leftHanded ? styles.leftHanded : '',
   ]
     .filter(Boolean)
     .join(' ');
 
-  const trailStyle =
-    trails && state !== 'full'
-      ? ({ '--trail-intensity': String(intensity) } as CSSProperties)
-      : undefined;
-
-  const customStyle =
-    colors && state !== 'past' && state !== 'smolder'
-      ? { ...stateStyle(state, colors, intensity, trails), ...trailStyle }
-      : trailStyle;
+  const inlineStyle = useCustomColors
+    ? customStyle
+    : colors && state !== 'past' && state !== 'smolder'
+      ? {
+          ...stateStyle(state, colors, intensity, trails),
+          ...(trails && state !== 'full'
+            ? ({ '--trail-intensity': String(intensity) } as CSSProperties)
+            : undefined),
+        }
+      : trails && state !== 'full'
+        ? ({ '--trail-intensity': String(intensity) } as CSSProperties)
+        : undefined;
 
   return (
     <div
       className={classNames}
-      style={customStyle}
+      style={inlineStyle}
       data-note-state={state}
       data-display-mode={displayMode}
+      data-custom-colors={useCustomColors ? 'true' : undefined}
       title={
         bend
           ? `${label ? `${label} · ` : ''}${formatBendLabel(bend)}`

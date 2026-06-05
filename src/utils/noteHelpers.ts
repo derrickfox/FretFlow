@@ -9,6 +9,7 @@
 // Reason: Trails needs progressive upcoming glow and orangy-red decay after notes play.
 
 import type { DisplayMode, GuitarNoteEvent } from '../types/guitar';
+import { upcomingApproachBlend } from './noteColors';
 import { midiToShortName, pitchMidiForFrettedNote } from './stringTuning';
 
 const QUARTER_TICKS = 960;
@@ -46,6 +47,8 @@ export type ClassifiedNote = {
   state: NoteVisualState;
   /** 0–1 strength for Trails ramp / smolder (1 = full brightness at cue or just played). */
   intensity: number;
+  /** 0–1 blend from upcoming color → active color as the cue nears. */
+  approachBlend?: number;
 };
 
 /** Trails upcoming ramp: peak brightness and how much of the ahead window glows. */
@@ -104,13 +107,22 @@ export function classifyNoteAtTime(
   }
 
   if (note.startTick > currentTick) {
-    return { state: 'upcoming', intensity: 1 };
+    const ticksUntil = note.startTick - currentTick;
+    return {
+      state: 'upcoming',
+      intensity: 1,
+      approachBlend: upcomingApproachBlend(ticksUntil, lookaheadTicks),
+    };
   }
   if (note.endTick <= currentTick && currentTick - note.endTick <= lingerTicks) {
     return { state: 'full', intensity: 1 };
   }
   if (currentTick <= 0 && note.startTick <= lookaheadTicks) {
-    return { state: 'upcoming', intensity: 1 };
+    return {
+      state: 'upcoming',
+      intensity: 1,
+      approachBlend: upcomingApproachBlend(note.startTick, lookaheadTicks),
+    };
   }
   return null;
 }
@@ -134,7 +146,11 @@ function classifyNoteTrails(
     const ticksUntil = note.startTick - currentTick;
     const intensity = trailsUpcomingIntensity(ticksUntil, ahead, glow);
     if (intensity == null) return null;
-    return { state: 'upcoming', intensity };
+    return {
+      state: 'upcoming',
+      intensity,
+      approachBlend: upcomingApproachBlend(ticksUntil, ahead),
+    };
   }
 
   if (note.endTick <= currentTick) {
@@ -147,7 +163,11 @@ function classifyNoteTrails(
   if (currentTick <= 0 && note.startTick <= ahead) {
     const intensity = trailsUpcomingIntensity(note.startTick, ahead, glow);
     if (intensity == null) return null;
-    return { state: 'upcoming', intensity };
+    return {
+      state: 'upcoming',
+      intensity,
+      approachBlend: upcomingApproachBlend(note.startTick, ahead),
+    };
   }
 
   return null;

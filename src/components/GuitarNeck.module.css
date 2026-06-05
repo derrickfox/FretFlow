@@ -145,6 +145,28 @@
   border-radius: 4px;
 }
 
+/* AI_CHANGE:
+   Tool: Cursor
+   Model: Composer
+   Timestamp: 2026-06-05T12:35:00-04:00
+   Purpose: Stack alternate-tuning detail under the tuning badge label.
+   Reason: User wants Standard vs Alternate tuning tags with open-string notes below. */
+.tuningBadgeGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+}
+
+.tuningDetail {
+  font-size: 0.58rem;
+  font-weight: 600;
+  color: rgba(200, 215, 255, 0.92);
+  line-height: 1.25;
+  padding: 0 0.15rem;
+  max-width: 14rem;
+}
+
 .capoBadge {
   color: #ffe8c8;
   background: rgba(180, 90, 30, 0.55);

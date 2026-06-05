@@ -74,6 +74,9 @@ export type PracticeSettings = {
   trailsPeakGlow: number;
   /** Trails: % of “notes ahead” window before dots start ramping (100 = earliest). */
   trailsGlowLeadPercent: number;
+  noteColorUpcoming: string;
+  noteColorActive: string;
+  noteColorPlayed: string;
   loopEnabled: boolean;
   loopStartMs: number;
   loopEndMs: number;
@@ -109,9 +112,9 @@ export const DEFAULT_TRAILS_GLOW_LEAD_PERCENT = 25;
 // AI_CHANGE:
 // Tool: Cursor
 // Model: Composer
-// Timestamp: 2026-06-04T18:20:00-04:00
-// Purpose: Default Practice panel to Trails, 0.6s ahead, 0.2s linger, 25% glow lead.
-// Reason: User’s preferred starting settings from live practice UI screenshot.
+// Timestamp: 2026-06-05T16:00:00-04:00
+// Purpose: Note color pickers apply in Trails display only; Standard uses per-track hues.
+// Reason: User wants generic track colors in Standard and custom pickers in Trails.
 
 export const DEFAULT_PRACTICE: PracticeSettings = {
   showNoteNames: false,
@@ -122,6 +125,9 @@ export const DEFAULT_PRACTICE: PracticeSettings = {
   noteLingerMs: DEFAULT_NOTE_LINGER_MS,
   trailsPeakGlow: DEFAULT_TRAILS_PEAK_GLOW,
   trailsGlowLeadPercent: DEFAULT_TRAILS_GLOW_LEAD_PERCENT,
+  noteColorUpcoming: '#FFE566',
+  noteColorActive: '#E84830',
+  noteColorPlayed: '#6A8FC8',
   loopEnabled: false,
   loopStartMs: 0,
   loopEndMs: 0,

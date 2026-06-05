@@ -2,6 +2,7 @@ import { useMemo, type CSSProperties } from 'react';
 import type { GuitarNoteEvent, PracticeSettings } from '../types/guitar';
 import { FRET_MARKERS } from '../types/guitar';
 import {
+  formatTuningDetail,
   isStandardTuning,
   neckStringLabels,
   tabFretToNeckFret,
@@ -21,12 +22,13 @@ import {
   shouldShowBendBadge,
   type BendVisualContext,
 } from '../utils/bendDisplay';
+import { buildCustomNoteDotStyle } from '../utils/noteColors';
 import { mergeNotesAtSameFret } from '../utils/mergeNeckDots';
+import { blendTrackNoteColors } from '../utils/trackColors';
 import {
   computeDisplayMaxFret,
   neckFretToLeftPercent,
 } from '../utils/neckFretSpan';
-import { blendTrackNoteColors } from '../utils/trackColors';
 import { NoteDot } from './NoteDot';
 import styles from './GuitarNeck.module.css';
 
@@ -46,6 +48,8 @@ type GuitarNeckProps = {
   /** Open-string MIDI top → bottom for labels (from primary neck track). */
   tuningMidi?: number[];
   tuningName?: string;
+  /** Capo/tuning badges above the neck (off in practice preview). */
+  showSetupBadges?: boolean;
 };
 
 export function GuitarNeck({
@@ -59,6 +63,7 @@ export function GuitarNeck({
   capoFret = 0,
   tuningMidi,
   tuningName,
+  showSetupBadges = true,
 }: GuitarNeckProps) {
   const displayMaxFret = useMemo(
     () => computeDisplayMaxFret(events, capoFret),
@@ -77,6 +82,8 @@ export function GuitarNeck({
     }
     return neckStringLabels([64, 59, 55, 50, 45, 40], stringCount);
   }, [practice.showStandardTuning, stringCount, tuningMidi]);
+
+  const useCustomColors = displayMode === 'trails';
 
   const mergedDots = useMemo(() => {
     const { noteLookaheadMs, noteLingerMs } = practice;
@@ -100,7 +107,7 @@ export function GuitarNeck({
     const linger = millisToTicks(noteLingerMs, tempo);
     const trailsGlow =
       displayMode === 'trails'
-        ? trailsGlowFromPractice(practice.trailsPeakGlow, practice.trailsGlowLeadPercent)
+        ? trailsGlowFromPractice(practice.trailsPeakGlow, 100)
         : undefined;
     const classified = windowed
       .map((note) => {
@@ -126,9 +133,18 @@ export function GuitarNeck({
     practice.noteLookaheadMs,
     practice.noteLingerMs,
     practice.trailsPeakGlow,
-    practice.trailsGlowLeadPercent,
     practice.showNoteNames,
   ]);
+
+  const liveFretsOnNeck = useMemo(
+    () =>
+      new Set(
+        mergedDots
+          .filter((d) => d.layer === 'live')
+          .map((d) => `${d.string}-${d.fret}`),
+      ),
+    [mergedDots],
+  );
 
   const neckClass = [
     styles.neck,
@@ -136,6 +152,12 @@ export function GuitarNeck({
   ]
     .filter(Boolean)
     .join(' ');
+
+  const standardTuning = tuningMidi ? isStandardTuning(tuningMidi) : true;
+  const tuningDetail =
+    tuningMidi && !standardTuning
+      ? tuningName?.trim() || formatTuningDetail(tuningMidi, stringCount)
+      : undefined;
 
   return (
     <div
@@ -147,15 +169,20 @@ export function GuitarNeck({
         className={neckClass}
         style={{ '--fret-count': String(displayMaxFret + 1) } as CSSProperties}
       >
-        {(capoFret > 0 || (tuningMidi && !isStandardTuning(tuningMidi))) && (
+        {showSetupBadges && (capoFret > 0 || tuningMidi) && (
           <div className={styles.neckSetup}>
             {capoFret > 0 ? (
               <span className={styles.capoBadge}>Capo {capoFret}</span>
             ) : null}
-            {tuningMidi && !isStandardTuning(tuningMidi) ? (
-              <span className={styles.tuningBadge}>
-                {tuningName?.trim() || 'Alternate tuning'}
-              </span>
+            {tuningMidi ? (
+              <div className={styles.tuningBadgeGroup}>
+                <span className={styles.tuningBadge}>
+                  {standardTuning ? 'Standard' : 'Alternate tuning'}
+                </span>
+                {tuningDetail ? (
+                  <span className={styles.tuningDetail}>{tuningDetail}</span>
+                ) : null}
+              </div>
             ) : null}
           </div>
         )}
@@ -224,7 +251,23 @@ export function GuitarNeck({
               practice.leftHanded,
             );
             const topPct = ((row + 0.5) / stringCount) * 100;
-            const colors = blendTrackNoteColors(dot.trackIndices, neckTrackIndices);
+            const trackColors = blendTrackNoteColors(
+              dot.trackIndices,
+              neckTrackIndices,
+            );
+            const customDotStyle = useCustomColors
+              ? buildCustomNoteDotStyle(
+                  dot.state,
+                  dot.intensity,
+                  dot.approachBlend,
+                  {
+                    upcoming: practice.noteColorUpcoming,
+                    active: practice.noteColorActive,
+                    played: practice.noteColorPlayed,
+                  },
+                  true,
+                )
+              : undefined;
             const bendLiftPx =
               dot.bend && bendCtx
                 ? bendVisualLiftPx(dot.bend, bendCtx, stringCount)
@@ -234,6 +277,17 @@ export function GuitarNeck({
               practice.showBendBadges,
             );
             const isBending = bendLiftPx > 0.5;
+            const lingerSharesFret =
+              dot.layer === 'linger' &&
+              liveFretsOnNeck.has(`${dot.string}-${dot.fret}`);
+            const positionTransform = [
+              lingerSharesFret ? 'translate(3px, -3px)' : null,
+              bendLiftPx > 0
+                ? `translateY(calc(-1 * ${bendLiftPx}px))`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(' ');
 
             return (
               <div
@@ -242,10 +296,7 @@ export function GuitarNeck({
                 style={{
                   left: `${leftPct}%`,
                   top: `${topPct}%`,
-                  transform:
-                    bendLiftPx > 0
-                      ? `translateY(calc(-1 * ${bendLiftPx}px))`
-                      : undefined,
+                  transform: positionTransform || undefined,
                 }}
               >
                 <NoteDot
@@ -254,7 +305,9 @@ export function GuitarNeck({
                   displayMode={displayMode}
                   label={dot.label}
                   leftHanded={practice.leftHanded}
-                  colors={colors}
+                  colors={useCustomColors ? undefined : trackColors}
+                  useCustomColors={useCustomColors}
+                  customStyle={customDotStyle}
                   bend={showBadge ? dot.bend : undefined}
                 />
               </div>

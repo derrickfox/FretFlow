@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parseGuitarProFile } from '../src/services/guitarProParser';
 import {
+  formatTuningDetail,
   isStandardTuning,
   neckStringLabels,
   pitchMidiForFrettedNote,
@@ -25,6 +26,7 @@ describe('string tuning and capo', () => {
     expect(isStandardTuning([64, 59, 55, 50, 45, 40])).toBe(true);
     expect(isStandardTuning(tuning)).toBe(false);
     expect(neckStringLabels(tuning, 6)[5]).toBe('C2');
+    expect(formatTuningDetail([64, 59, 55, 50, 45, 40], 6)).toContain('E4');
   });
 
   it('never-going-back-again has capo 6 and non-standard tuning', async () => {

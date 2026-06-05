@@ -40,3 +40,8 @@
   color: rgba(160, 175, 210, 0.7);
   font-size: 0.9rem;
 }
+
+.tuningDetail {
+  font-size: 0.8rem;
+  color: rgba(180, 195, 230, 0.9);
+}
