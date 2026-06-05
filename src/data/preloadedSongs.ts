@@ -111,6 +111,28 @@ export const PRELOADED_SONGS: PreloadedSong[] = [
     label: 'Waltz #2 — Elliott Smith',
     url: assetUrl('preloaded/waltz-2.gp'),
   },
+  // AI_CHANGE:
+  // Tool: Cursor
+  // Model: Composer
+  // Timestamp: 2026-06-05T09:24:00-04:00
+  // Purpose: Adds Rock and Roll to the preloaded sample picker.
+  // Reason: User provided Led Zeppelin GP file for the demo library.
+  {
+    id: 'rock-and-roll',
+    label: 'Rock and Roll — Led Zeppelin',
+    url: assetUrl('preloaded/rock-and-roll.gp'),
+  },
+  // AI_CHANGE:
+  // Tool: Cursor
+  // Model: Composer
+  // Timestamp: 2026-06-05T09:25:00-04:00
+  // Purpose: Adds Crazy Train to the preloaded sample picker.
+  // Reason: User provided Ozzy Osbourne GP file for the demo library.
+  {
+    id: 'crazy-train',
+    label: 'Crazy Train — Ozzy Osbourne',
+    url: assetUrl('preloaded/crazy-train.gp'),
+  },
 ];
 
 export function getPreloadedSong(id: string): PreloadedSong | undefined {

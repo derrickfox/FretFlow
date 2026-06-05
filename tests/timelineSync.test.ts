@@ -153,4 +153,24 @@ describe('fretboard tab sync', () => {
     const events = result.eventsByTrack.get(guitar!.index) ?? [];
     expect(events.length).toBeGreaterThan(0);
   });
+
+  it('rock-and-roll preloaded file parses with guitar events', async () => {
+    const { result } = await parseGuitarProFile(
+      loadBuffer('public/preloaded/rock-and-roll.gp'),
+    );
+    const guitar = result.tracks.find((t) => t.isGuitar);
+    expect(guitar).toBeDefined();
+    const events = result.eventsByTrack.get(guitar!.index) ?? [];
+    expect(events.length).toBeGreaterThan(0);
+  });
+
+  it('crazy-train preloaded file parses with guitar events', async () => {
+    const { result } = await parseGuitarProFile(
+      loadBuffer('public/preloaded/crazy-train.gp'),
+    );
+    const guitar = result.tracks.find((t) => t.isGuitar);
+    expect(guitar).toBeDefined();
+    const events = result.eventsByTrack.get(guitar!.index) ?? [];
+    expect(events.length).toBeGreaterThan(0);
+  });
 });

@@ -39,7 +39,7 @@ function App() {
   const [playbackError, setPlaybackError] = useState<string | null>(null);
   const [neckTracks, setNeckTracks] = useState<number[]>([]);
   const [audioTracks, setAudioTracks] = useState<number[]>([]);
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('standard');
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('trails');
   const [practice, setPractice] = useState<PracticeSettings>(DEFAULT_PRACTICE);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isReady, setIsReady] = useState(false);

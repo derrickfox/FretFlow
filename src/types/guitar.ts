@@ -84,12 +84,12 @@ export type PlaybackState = {
 /** Min/max for the “notes ahead” practice slider */
 export const NOTE_LOOKAHEAD_MIN_MS = 400;
 export const NOTE_LOOKAHEAD_MAX_MS = 10_000;
-export const DEFAULT_NOTE_LOOKAHEAD_MS = 4000;
+export const DEFAULT_NOTE_LOOKAHEAD_MS = 600;
 
 /** Min/max for the “notes linger” practice slider */
 export const NOTE_LINGER_MIN_MS = 0;
 export const NOTE_LINGER_MAX_MS = 10_000;
-export const DEFAULT_NOTE_LINGER_MS = 3500;
+export const DEFAULT_NOTE_LINGER_MS = 200;
 
 export const TRAILS_PEAK_GLOW_MIN = 15;
 export const TRAILS_PEAK_GLOW_MAX = 100;
@@ -97,7 +97,14 @@ export const DEFAULT_TRAILS_PEAK_GLOW = 100;
 
 export const TRAILS_GLOW_LEAD_MIN = 10;
 export const TRAILS_GLOW_LEAD_MAX = 100;
-export const DEFAULT_TRAILS_GLOW_LEAD_PERCENT = 100;
+export const DEFAULT_TRAILS_GLOW_LEAD_PERCENT = 25;
+
+// AI_CHANGE:
+// Tool: Cursor
+// Model: Composer
+// Timestamp: 2026-06-04T18:20:00-04:00
+// Purpose: Default Practice panel to Trails, 0.6s ahead, 0.2s linger, 25% glow lead.
+// Reason: User’s preferred starting settings from live practice UI screenshot.
 
 export const DEFAULT_PRACTICE: PracticeSettings = {
   showNoteNames: false,
