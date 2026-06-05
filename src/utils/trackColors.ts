@@ -1,5 +1,6 @@
 export type TrackNoteColors = {
   activeBg: string;
+  activeBorder: string;
   activeShadow: string;
   upcomingBg: string;
   upcomingBorder: string;
@@ -35,9 +36,11 @@ function blendHues(hues: number[]): number {
 }
 
 function colorsFromHue(hue: number): TrackNoteColors {
+  const activeBorder = hsl(hue, 25, 98, 0.95);
   return {
     activeBg: `radial-gradient(circle at 35% 30%, ${hsl(hue, 95, 88)}, ${hsl(hue, 85, 58)} 55%, ${hsl(hue, 75, 42)})`,
-    activeShadow: `0 0 12px ${hsl(hue, 90, 55, 0.85)}, 0 0 2px ${hsl(hue, 30, 95, 0.9)}`,
+    activeBorder,
+    activeShadow: `0 0 0 2px ${activeBorder}, 0 0 0 3px rgba(12, 12, 18, 0.5), 0 0 12px ${hsl(hue, 90, 55, 0.85)}, 0 0 2px ${hsl(hue, 30, 95, 0.9)}`,
     upcomingBg: hsl(hue, 70, 55, 0.45),
     upcomingBorder: hsl(hue, 75, 72, 0.65),
     fullBg: hsl(hue, 55, 48, 0.38),

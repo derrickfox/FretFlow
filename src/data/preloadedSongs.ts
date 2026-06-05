@@ -252,6 +252,83 @@ const PRELOADED_SONGS_RAW: PreloadedSong[] = [
     label: 'Free Bird — Lynyrd Skynyrd',
     url: assetUrl('preloaded/free-bird.gp'),
   },
+  // AI_CHANGE:
+  // Tool: Cursor
+  // Model: Composer
+  // Timestamp: 2026-06-05T14:10:00-04:00
+  // Purpose: Adds seven jazz and blues GP files to the preloaded sample library.
+  // Reason: User provided Autumn Leaves, Neon, The Thrill Is Gone, Take The A Train, Misty, Satin Doll, and Blue Bossa tabs.
+  {
+    id: 'the-thrill-is-gone',
+    label: 'The Thrill Is Gone — B.B. King',
+    url: assetUrl('preloaded/the-thrill-is-gone.gp'),
+  },
+  {
+    id: 'blue-bossa',
+    label: 'Blue Bossa — Clase De Música',
+    url: assetUrl('preloaded/blue-bossa.gp'),
+  },
+  {
+    id: 'satin-doll',
+    label: 'Satin Doll — Duke Ellington',
+    url: assetUrl('preloaded/satin-doll.gp'),
+  },
+  {
+    id: 'misty',
+    label: 'Misty — Joe Pass',
+    url: assetUrl('preloaded/misty.gp'),
+  },
+  {
+    id: 'take-the-a-train',
+    label: 'Take The A Train — Joe Pass',
+    url: assetUrl('preloaded/take-the-a-train.gp'),
+  },
+  {
+    id: 'neon',
+    label: 'Neon — John Mayer',
+    url: assetUrl('preloaded/neon.gp'),
+  },
+  {
+    id: 'autumn-leaves',
+    label: 'Autumn Leaves — Paul Davids',
+    url: assetUrl('preloaded/autumn-leaves.gp'),
+  },
+  // AI_CHANGE:
+  // Tool: Cursor
+  // Model: Composer
+  // Timestamp: 2026-06-05T14:35:00-04:00
+  // Purpose: Adds six rock and classic-rock GP files to the preloaded library.
+  // Reason: User provided intro riff, Sultans Of Swing, Fortunate Son, Lookin' Out My Back Door, Watchtower, and The Trooper tabs.
+  {
+    id: 'fortunate-son',
+    label: 'Fortunate Son — Creedence Clearwater Revival',
+    url: assetUrl('preloaded/fortunate-son.gp'),
+  },
+  {
+    id: 'lookin-out-my-back-door',
+    label: "Lookin' Out My Back Door — Creedence Clearwater Revival",
+    url: assetUrl('preloaded/lookin-out-my-back-door.gp'),
+  },
+  {
+    id: 'money-for-nothing-intro-riff',
+    label: 'Money for Nothing (Intro Riff) — Dire Straits',
+    url: assetUrl('preloaded/money-for-nothing-intro-riff.gp'),
+  },
+  {
+    id: 'sultans-of-swing',
+    label: 'Sultans Of Swing — Dire Straits',
+    url: assetUrl('preloaded/sultans-of-swing.gp'),
+  },
+  {
+    id: 'the-trooper',
+    label: 'The Trooper — Iron Maiden',
+    url: assetUrl('preloaded/the-trooper.gp'),
+  },
+  {
+    id: 'all-along-the-watchtower',
+    label: 'All Along The Watchtower — The Jimi Hendrix Experience',
+    url: assetUrl('preloaded/all-along-the-watchtower.gp'),
+  },
 ];
 
 // AI_CHANGE:

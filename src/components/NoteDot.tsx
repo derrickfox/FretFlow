@@ -92,6 +92,7 @@ function stateStyle(
     case 'active':
       return {
         background: colors.activeBg,
+        border: `2.5px solid ${colors.activeBorder}`,
         boxShadow: colors.activeShadow,
         opacity: trails ? 1 : undefined,
         zIndex: 3,

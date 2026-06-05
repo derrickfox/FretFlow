@@ -36,8 +36,15 @@
     transform 0.12s ease;
 }
 
+/* AI_CHANGE:
+   Tool: Cursor
+   Model: Composer
+   Timestamp: 2026-06-05T14:20:00-04:00
+   Purpose: Thicker high-contrast ring on notes sounding at the current moment.
+   Reason: User wanted active dots to stand out clearly from upcoming and linger trails. */
 .customActive {
   animation: pulse 0.55s ease-in-out infinite alternate;
+  border-width: 2.5px !important;
 }
 
 .customSmolderAnim {
@@ -46,7 +53,11 @@
 
 .active {
   background: radial-gradient(circle at 35% 30%, #fff6c4, #f5b942 55%, #d48812);
-  box-shadow: 0 0 12px rgba(245, 185, 66, 0.85), 0 0 2px #fff;
+  border: 2.5px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 0 0 1px rgba(12, 12, 18, 0.55),
+    0 0 12px rgba(245, 185, 66, 0.85),
+    0 0 2px #fff;
   z-index: 3;
   animation: pulse 0.55s ease-in-out infinite alternate;
 }
@@ -87,6 +98,11 @@
 }
 
 .trails.active {
+  border: 2.5px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 0 0 1px rgba(12, 12, 18, 0.55),
+    0 0 12px rgba(245, 185, 66, 0.85),
+    0 0 2px #fff;
   animation: pulse 0.55s ease-in-out infinite alternate;
 }
 

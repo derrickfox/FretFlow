@@ -101,14 +101,22 @@ export function buildCustomNoteDotStyle(
         zIndex: 2,
       } as CSSProperties;
     }
-    case 'active':
+    // AI_CHANGE:
+    // Tool: Cursor
+    // Model: Composer
+    // Timestamp: 2026-06-05T14:20:00-04:00
+    // Purpose: Bright ring border on active dots so the current moment is obvious.
+    // Reason: User requested stronger visual distinction for notes sounding right now.
+    case 'active': {
+      const ring = blendHex(colors.active, '#ffffff', 0.55);
       return {
         '--dot-fill': radialDotFill(colors.active, 0.28),
-        '--dot-border': 'transparent',
-        '--dot-shadow': `0 0 12px ${hexToRgba(colors.active, 0.85)}, 0 0 2px ${hexToRgba(colors.active, 0.45)}`,
+        '--dot-border': ring,
+        '--dot-shadow': `0 0 0 2px #ffffff, 0 0 0 3px rgba(12, 12, 18, 0.55), 0 0 14px ${hexToRgba(colors.active, 0.9)}, 0 0 4px ${hexToRgba(colors.active, 0.5)}`,
         '--dot-opacity': '1',
         zIndex: 3,
       } as CSSProperties;
+    }
     case 'full': {
       const played = colors.played;
       return {

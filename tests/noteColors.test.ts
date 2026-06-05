@@ -36,6 +36,19 @@ describe('note colors', () => {
     expect(upcomingApproachBlend(0, 960)).toBe(1);
   });
 
+  it('buildCustomNoteDotStyle uses a strong border for active notes', () => {
+    const colors = {
+      upcoming: '#FFFF00',
+      active: '#FF0000',
+      played: '#0000FF',
+    };
+    const active = buildCustomNoteDotStyle('active', 1, 0, colors, true);
+    expect(String(active['--dot-border' as keyof typeof active]).toLowerCase()).not.toBe(
+      'transparent',
+    );
+    expect(String(active['--dot-shadow' as keyof typeof active])).toContain('0 0 0 2px');
+  });
+
   it('buildCustomNoteDotStyle uses played color for smolder borders', () => {
     const colors = {
       upcoming: '#FFFF00',
