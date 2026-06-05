@@ -91,7 +91,7 @@ export type PracticePreviewScale = {
   label: string;
   /** Key the stored fret pattern was written for (transposed to user key). */
   referenceKey: PracticePreviewKeyId;
-  ascend: ReadonlyArray<readonly [string: number, fret: number]>;
+  ascend: ReadonlyArray<readonly [number, number]>;
 };
 
 export const DEFAULT_PREVIEW_SCALE_ID: PracticePreviewScaleId = 'major';
@@ -237,7 +237,7 @@ function transposePosition(
   string: number,
   fret: number,
   semitones: number,
-): [string: number, fret: number] {
+): [number, number] {
   const sourceMidi = pitchMidiForFrettedNote(string, fret, PREVIEW_TUNING, 0);
   if (sourceMidi == null) return [string, fret];
   const targetMidi = sourceMidi + semitones;
@@ -250,7 +250,7 @@ function transposePosition(
     }
   }
 
-  let best: [string, fret] | null = null;
+  let best: [number, number] | null = null;
   let bestScore = Infinity;
   for (let s = 1; s <= 6; s++) {
     const stringOpen = openStringMidi(PREVIEW_TUNING, s);
@@ -271,7 +271,7 @@ function transposeAscend(
   ascend: PracticePreviewScale['ascend'],
   fromKey: PracticePreviewKeyId,
   toKey: PracticePreviewKeyId,
-): Array<[string: number, fret: number]> {
+): Array<[number, number]> {
   if (fromKey === toKey) return ascend.map(([s, f]) => [s, f]);
   const shift = semitoneShift(fromKey, toKey);
   return ascend.map(([string, fret]) => transposePosition(string, fret, shift));
@@ -284,7 +284,7 @@ type PreviewStep = {
   hold?: number;
 };
 
-function buildScaleSteps(ascend: Array<[string: number, fret: number]>): PreviewStep[] {
+function buildScaleSteps(ascend: Array<[number, number]>): PreviewStep[] {
   const down = [...ascend].reverse().slice(1);
   const path = [...ascend, ...down];
   let beat = 0;
