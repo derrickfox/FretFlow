@@ -9,11 +9,7 @@
 // Reason: Trails needs progressive upcoming glow and orangy-red decay after notes play.
 
 import type { DisplayMode, GuitarNoteEvent } from '../types/guitar';
-import {
-  midiToShortName,
-  openStringMidi,
-  pitchMidiForFrettedNote,
-} from './stringTuning';
+import { midiToShortName, pitchMidiForFrettedNote } from './stringTuning';
 
 const QUARTER_TICKS = 960;
 
