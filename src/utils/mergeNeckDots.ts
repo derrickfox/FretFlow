@@ -20,6 +20,7 @@ export type MergedNeckDot = {
   bend?: NoteBendInfo;
   startTick: number;
   endTick: number;
+  capo: number;
 };
 
 function mergeBend(a?: NoteBendInfo, b?: NoteBendInfo): NoteBendInfo | undefined {
@@ -63,6 +64,7 @@ export function mergeNotesAtSameFret(
         bend: note.bend,
         startTick: note.startTick,
         endTick: note.endTick,
+        capo: note.capo,
       });
       continue;
     }
@@ -75,6 +77,7 @@ export function mergeNotesAtSameFret(
       existing.intensity = intensity;
       existing.startTick = note.startTick;
       existing.endTick = note.endTick;
+      existing.capo = note.capo;
       if (note.bend) existing.bend = note.bend;
     } else if (state === existing.state) {
       existing.intensity = Math.max(existing.intensity, intensity);

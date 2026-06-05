@@ -129,6 +129,68 @@
   background: rgba(220, 210, 190, 0.35);
 }
 
+.neckSetup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.15rem 0.5rem 0.35rem 3.25rem;
+}
+
+.capoBadge,
+.tuningBadge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+
+.capoBadge {
+  color: #ffe8c8;
+  background: rgba(180, 90, 30, 0.55);
+  border: 1px solid rgba(255, 180, 80, 0.45);
+}
+
+.tuningBadge {
+  color: #d8e4ff;
+  background: rgba(50, 80, 140, 0.45);
+  border: 1px solid rgba(120, 160, 220, 0.4);
+}
+
+.capoFretNumber {
+  color: #ffb86a;
+  font-weight: 800;
+}
+
+.behindCapo {
+  opacity: 0.28;
+}
+
+.capoFretCell {
+  background: rgba(200, 110, 40, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(255, 170, 70, 0.35);
+}
+
+.capoBar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  margin-left: -2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 200, 120, 0.95),
+    rgba(210, 120, 50, 0.9) 45%,
+    rgba(255, 200, 120, 0.95)
+  );
+  box-shadow:
+    0 0 10px rgba(255, 150, 60, 0.55),
+    inset 0 0 2px rgba(255, 255, 255, 0.35);
+  z-index: 2;
+  pointer-events: none;
+}
+
 .notesLayer {
   position: absolute;
   left: 3.25rem;

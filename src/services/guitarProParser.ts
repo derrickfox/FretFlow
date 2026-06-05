@@ -49,6 +49,7 @@ function buildParseResult(
       const staff = track.staves[0];
       const stringCount = staff?.tuning?.length ?? 6;
       const kind = classifyTrackKind(track);
+      const tuningMidi = [...(staff?.tuning ?? [])];
       return {
         index,
         name: track.name || `Track ${index + 1}`,
@@ -57,6 +58,9 @@ function buildParseResult(
         isGuitar: kind === 'guitar',
         isGuitarLike: kind === 'guitar' || kind === 'bass',
         stringCount: Math.max(stringCount, 6),
+        capo: staff?.capo ?? 0,
+        tuningMidi,
+        tuningName: staff?.tuningName || undefined,
       };
     });
 
@@ -87,17 +91,29 @@ function computeDurationMs(eventsByTrack: Map<number, GuitarNoteEvent[]>): numbe
   return 0;
 }
 
+// AI_CHANGE:
+// Tool: Cursor
+// Model: Composer
+// Timestamp: 2026-06-05T22:30:00-04:00
+// Purpose: Expand note events from MidiTickLookup.masterBars so repeat passes get playback ticks.
+// Reason: getBeatStart() is first-pass only; after a GP repeat, player currentTick leaves event ticks behind.
 function extractTrackEvents(
   track: model.Track,
   trackIndex: number,
   tickLookup: midi.MidiTickLookup,
 ): GuitarNoteEvent[] {
   const events: GuitarNoteEvent[] = [];
-  const tuningMidi = getTrackTuningMidi(track);
+  const staff = track.staves[0];
+  const tuningMidi = staff?.tuning?.length ? [...staff.tuning] : (getTrackTuningMidi(track) ?? []);
+  const capo = staff?.capo ?? 0;
   let idCounter = 0;
 
-  for (const staff of track.staves) {
-    for (const bar of staff.bars) {
+  const beatMeta = new Map<
+    number,
+    { startMs: number; durationMs: number; measure: number }
+  >();
+  for (const trackStaff of track.staves) {
+    for (const bar of trackStaff.bars) {
       const measure = bar.index + 1;
       for (const voice of bar.voices) {
         if (voice.isEmpty) continue;
@@ -105,51 +121,67 @@ function extractTrackEvents(
         for (let i = 0; i < beats.length; i++) {
           const beat = beats[i];
           if (beat.isRest || beat.isEmpty) continue;
-
-          const startTick = tickLookup.getBeatStart(beat);
-          const range = tickLookup.getRelativeBeatPlaybackRange(beat);
-          let endTick = startTick + Math.max(beat.playbackDuration, 1);
-          if (range) {
-            const masterStart = tickLookup.getMasterBarStart(beat.voice.bar.masterBar);
-            endTick = masterStart + range.endTick;
-          } else {
-            const nextBeat = beat.nextBeat ?? beats[i + 1] ?? null;
-            if (nextBeat) {
-              const nextStart = tickLookup.getBeatStart(nextBeat);
-              if (nextStart > startTick) endTick = nextStart;
-            }
-          }
-          if (endTick <= startTick) endTick = startTick + 1;
-
           const startMs = beat.timer ?? 0;
           const nextBeat = beat.nextBeat ?? beats[i + 1] ?? null;
           const durationMs =
             nextBeat?.timer != null && beat.timer != null
               ? Math.max(40, nextBeat.timer - beat.timer)
               : 120;
-
-          for (const note of beat.notes) {
-            if (!note.isStringed) continue;
-            if (note.fret < 0) continue;
-
-            const bend = extractNoteBendInfo(note);
-
-            events.push({
-              id: `${trackIndex}-${idCounter++}`,
-              trackIndex,
-              string: note.string,
-              fret: note.fret,
-              startTick,
-              endTick,
-              startMs,
-              durationMs,
-              noteName: fretToNoteName(note.string, note.fret, tuningMidi),
-              measure,
-              ...(bend ? { bend } : {}),
-            });
-          }
+          beatMeta.set(beat.id, { startMs, durationMs, measure });
         }
       }
+    }
+  }
+
+  for (const masterBarLookup of tickLookup.masterBars) {
+    let slice = masterBarLookup.firstBeat;
+    while (slice) {
+      for (const item of slice.highlightedBeats) {
+        const beat = item.beat;
+        if (beat.voice.bar.staff.track.index !== trackIndex) continue;
+        if (beat.isRest || beat.isEmpty) continue;
+        // Match tab cursor: beat is visible when its playback start aligns with this slice.
+        if (item.playbackStart !== slice.start) continue;
+
+        const startTick = masterBarLookup.start + item.playbackStart;
+        const range = tickLookup.getRelativeBeatPlaybackRange(beat);
+        let endTick = startTick + Math.max(beat.playbackDuration, 1);
+        if (range) {
+          endTick = masterBarLookup.start + range.endTick;
+        } else {
+          const sliceEnd = masterBarLookup.start + slice.end;
+          if (sliceEnd > startTick) endTick = sliceEnd;
+        }
+        if (endTick <= startTick) endTick = startTick + 1;
+
+        const meta = beatMeta.get(beat.id) ?? {
+          startMs: 0,
+          durationMs: 120,
+          measure: beat.voice.bar.index + 1,
+        };
+
+        for (const note of beat.notes) {
+          if (!note.isStringed || note.fret < 0) continue;
+
+          const bend = extractNoteBendInfo(note);
+
+          events.push({
+            id: `${trackIndex}-${idCounter++}`,
+            trackIndex,
+            string: note.string,
+            fret: note.fret,
+            startTick,
+            endTick,
+            startMs: meta.startMs,
+            durationMs: meta.durationMs,
+            noteName: fretToNoteName(note.string, note.fret, tuningMidi, capo),
+            measure: meta.measure,
+            capo,
+            ...(bend ? { bend } : {}),
+          });
+        }
+      }
+      slice = slice.nextBeat;
     }
   }
 

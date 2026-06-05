@@ -26,6 +26,7 @@ import {
   TRAILS_PEAK_GLOW_MAX,
   TRAILS_PEAK_GLOW_MIN,
 } from './types/guitar';
+import { isStandardTuning, neckStringLabels } from './utils/stringTuning';
 import styles from './App.module.css';
 
 function App() {
@@ -81,6 +82,30 @@ function App() {
       (index) => parseResult.tracks.find((t) => t.index === index)?.stringCount ?? 6,
     );
     return Math.max(6, ...counts);
+  }, [parseResult, neckTracks]);
+
+  const neckDisplay = useMemo(() => {
+    if (!parseResult || neckTracks.length === 0) {
+      return { capoFret: 0, tuningMidi: undefined as number[] | undefined, tuningName: undefined as string | undefined };
+    }
+    const visible = neckTracks
+      .map((index) => parseResult.tracks.find((t) => t.index === index))
+      .filter((t): t is NonNullable<typeof t> => t != null);
+    const primary =
+      visible.find((t) => t.isGuitar) ?? visible[0];
+    const capoFret = Math.max(0, ...visible.map((t) => t.capo ?? 0));
+    const tuningMidi = primary?.tuningMidi?.length ? primary.tuningMidi : undefined;
+    const tuningLabel =
+      tuningMidi && !isStandardTuning(tuningMidi)
+        ? primary?.tuningName?.trim() ||
+          neckStringLabels(tuningMidi, primary?.stringCount ?? 6).join(' · ')
+        : undefined;
+    return {
+      capoFret,
+      tuningMidi,
+      tuningName: primary?.tuningName,
+      tuningLabel,
+    };
   }, [parseResult, neckTracks]);
 
   // AI_CHANGE:
@@ -360,6 +385,9 @@ function App() {
                   practice={practice}
                   stringCount={displayStringCount}
                   neckTrackIndices={neckTracks}
+                  capoFret={neckDisplay.capoFret}
+                  tuningMidi={neckDisplay.tuningMidi}
+                  tuningName={neckDisplay.tuningName}
                 />
               ) : (
                 <div className={styles.emptyStage}>
@@ -392,6 +420,8 @@ function App() {
                 metadata={parseResult.metadata}
                 trackName={selectedTracksLabel}
                 noteCount={trackEvents.length}
+                capoFret={neckDisplay.capoFret}
+                tuningLabel={neckDisplay.tuningLabel}
               />
               <div className={styles.trackPanel}>
                 <TrackSelector

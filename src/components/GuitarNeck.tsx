@@ -1,6 +1,11 @@
 import { useMemo, type CSSProperties } from 'react';
 import type { GuitarNoteEvent, PracticeSettings } from '../types/guitar';
-import { FRET_MARKERS, MAX_FRET, STANDARD_TUNING } from '../types/guitar';
+import { FRET_MARKERS } from '../types/guitar';
+import {
+  isStandardTuning,
+  neckStringLabels,
+  tabFretToNeckFret,
+} from '../utils/stringTuning';
 import type { DisplayMode } from '../types/guitar';
 import {
   classifyNoteAtTime,
@@ -17,6 +22,10 @@ import {
   type BendVisualContext,
 } from '../utils/bendDisplay';
 import { mergeNotesAtSameFret } from '../utils/mergeNeckDots';
+import {
+  computeDisplayMaxFret,
+  neckFretToLeftPercent,
+} from '../utils/neckFretSpan';
 import { blendTrackNoteColors } from '../utils/trackColors';
 import { NoteDot } from './NoteDot';
 import styles from './GuitarNeck.module.css';
@@ -32,6 +41,11 @@ type GuitarNeckProps = {
   stringCount?: number;
   /** Track indices shown on the neck — used for per-track dot colors */
   neckTrackIndices: number[];
+  /** Capo fret to mark on the neck (max among visible guitar tracks). */
+  capoFret?: number;
+  /** Open-string MIDI top → bottom for labels (from primary neck track). */
+  tuningMidi?: number[];
+  tuningName?: string;
 };
 
 export function GuitarNeck({
@@ -42,15 +56,27 @@ export function GuitarNeck({
   practice,
   stringCount = 6,
   neckTrackIndices,
+  capoFret = 0,
+  tuningMidi,
+  tuningName,
 }: GuitarNeckProps) {
-  const frets = useMemo(() => Array.from({ length: MAX_FRET + 1 }, (_, i) => i), []);
-  const strings = useMemo(
-    () =>
-      practice.showStandardTuning
-        ? [...STANDARD_TUNING].reverse()
-        : Array.from({ length: stringCount }, (_, i) => `S${stringCount - i}`),
-    [practice.showStandardTuning, stringCount],
+  const displayMaxFret = useMemo(
+    () => computeDisplayMaxFret(events, capoFret),
+    [events, capoFret],
   );
+  const frets = useMemo(
+    () => Array.from({ length: displayMaxFret + 1 }, (_, i) => i),
+    [displayMaxFret],
+  );
+  const strings = useMemo(() => {
+    if (!practice.showStandardTuning) {
+      return Array.from({ length: stringCount }, (_, i) => `S${stringCount - i}`);
+    }
+    if (tuningMidi?.length) {
+      return neckStringLabels(tuningMidi, stringCount);
+    }
+    return neckStringLabels([64, 59, 55, 50, 45, 40], stringCount);
+  }, [practice.showStandardTuning, stringCount, tuningMidi]);
 
   const mergedDots = useMemo(() => {
     const { noteLookaheadMs, noteLingerMs } = practice;
@@ -117,11 +143,29 @@ export function GuitarNeck({
       data-fretboard-dots={mergedDots.length}
       data-fretboard-events={events.length}
     >
-      <div className={neckClass}>
+      <div
+        className={neckClass}
+        style={{ '--fret-count': String(displayMaxFret + 1) } as CSSProperties}
+      >
+        {(capoFret > 0 || (tuningMidi && !isStandardTuning(tuningMidi))) && (
+          <div className={styles.neckSetup}>
+            {capoFret > 0 ? (
+              <span className={styles.capoBadge}>Capo {capoFret}</span>
+            ) : null}
+            {tuningMidi && !isStandardTuning(tuningMidi) ? (
+              <span className={styles.tuningBadge}>
+                {tuningName?.trim() || 'Alternate tuning'}
+              </span>
+            ) : null}
+          </div>
+        )}
         <div className={styles.fretNumbers}>
           <div className={styles.corner} />
           {frets.map((fret) => (
-            <div key={fret} className={styles.fretNumber}>
+            <div
+              key={fret}
+              className={`${styles.fretNumber} ${fret === capoFret && capoFret > 0 ? styles.capoFretNumber : ''}`}
+            >
               {fret}
             </div>
           ))}
@@ -137,10 +181,12 @@ export function GuitarNeck({
               <div className={styles.fretCells}>
                 {frets.map((fret) => {
                   const isMarker = (FRET_MARKERS as readonly number[]).includes(fret);
+                  const behindCapo = capoFret > 0 && fret > 0 && fret < capoFret;
+                  const isCapoFret = capoFret > 0 && fret === capoFret;
                   return (
                     <div
                       key={fret}
-                      className={`${styles.cell} ${isMarker ? styles.markerFret : ''} ${fret === 0 ? styles.nut : ''}`}
+                      className={`${styles.cell} ${isMarker ? styles.markerFret : ''} ${fret === 0 ? styles.nut : ''} ${behindCapo ? styles.behindCapo : ''} ${isCapoFret ? styles.capoFretCell : ''}`}
                     >
                       {fret === 12 && isMarker ? <span className={styles.doubleDot} /> : null}
                       {isMarker && fret !== 12 ? <span className={styles.fretDot} /> : null}
@@ -152,12 +198,17 @@ export function GuitarNeck({
           ))}
 
           <div className={styles.notesLayer}>
+          {capoFret > 0 ? (
+            <div
+              className={styles.capoBar}
+              style={{
+                left: `${neckFretToLeftPercent(capoFret, displayMaxFret, practice.leftHanded)}%`,
+              }}
+              aria-hidden
+            />
+          ) : null}
           {mergedDots.map((dot) => {
             const row = stringToVisualRow(dot.string, stringCount);
-            const fretToLeft = (fret: number) =>
-              practice.leftHanded
-                ? 100 - ((fret + 0.5) / (MAX_FRET + 1)) * 100
-                : ((fret + 0.5) / (MAX_FRET + 1)) * 100;
             const bendCtx: BendVisualContext | undefined = dot.bend
               ? {
                   state: dot.state,
@@ -166,7 +217,12 @@ export function GuitarNeck({
                   endTick: dot.endTick,
                 }
               : undefined;
-            const leftPct = fretToLeft(dot.fret);
+            const neckFret = tabFretToNeckFret(dot.fret, dot.capo);
+            const leftPct = neckFretToLeftPercent(
+              neckFret,
+              displayMaxFret,
+              practice.leftHanded,
+            );
             const topPct = ((row + 0.5) / stringCount) * 100;
             const colors = blendTrackNoteColors(dot.trackIndices, neckTrackIndices);
             const bendLiftPx =

@@ -15,11 +15,13 @@ import {
   AlphaTabApi,
   importer,
   midi,
+  PlayerOutputMode,
   Settings,
   type json,
   type model,
 } from '@coderline/alphatab';
 import { assetUrl } from '../utils/baseUrl';
+import { isIOSWebKit } from '../utils/mobileAudio';
 import { classifyTrackKind, isGuitarLikeKind } from '../utils/trackClassification';
 
 export const ALPHATAB_FONT_DIR = assetUrl('font/');
@@ -59,6 +61,15 @@ export function createTabPlayerSettings(
       enableUserInteraction: true,
       soundFont: ALPHATAB_SOUND_FONT,
       playerMode: 'EnabledSynthesizer',
+      // AI_CHANGE:
+      // Tool: Cursor
+      // Model: Composer
+      // Timestamp: 2026-06-05T09:35:00-04:00
+      // Purpose: Use ScriptProcessor synth output on iOS/iPadOS WebKit.
+      // Reason: AudioWorklets often load but produce no audio on mobile Safari/Chrome.
+      outputMode: isIOSWebKit()
+        ? PlayerOutputMode.WebAudioScriptProcessor
+        : PlayerOutputMode.WebAudioAudioWorklets,
       scrollElement,
       scrollMode: 'OffScreen',
       scrollOffsetY: 48,

@@ -21,6 +21,8 @@ export type GuitarNoteEvent = {
   measure?: number;
   /** String bend from Guitar Pro, when present */
   bend?: NoteBendInfo;
+  /** Capo on this note's track (tab fret is relative to capo). */
+  capo: number;
 };
 
 import type { TrackKind } from '../utils/trackClassification';
@@ -35,6 +37,11 @@ export type TrackInfo = {
   /** @deprecated Use kind / isGuitar — kept for compatibility */
   isGuitarLike: boolean;
   stringCount: number;
+  /** Capo fret from Guitar Pro (tab frets are relative to this). */
+  capo: number;
+  /** Open-string MIDI, top tab line first — matches alphaTab staff.tuning */
+  tuningMidi: number[];
+  tuningName?: string;
 };
 
 export type SongMetadata = {

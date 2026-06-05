@@ -173,4 +173,52 @@ describe('fretboard tab sync', () => {
     const events = result.eventsByTrack.get(guitar!.index) ?? [];
     expect(events.length).toBeGreaterThan(0);
   });
+
+  it('hysteria preloaded file parses with guitar events', async () => {
+    const { result } = await parseGuitarProFile(
+      loadBuffer('public/preloaded/hysteria.gp'),
+    );
+    const guitar = result.tracks.find((t) => t.isGuitar);
+    expect(guitar).toBeDefined();
+    const events = result.eventsByTrack.get(guitar!.index) ?? [];
+    expect(events.length).toBeGreaterThan(0);
+  });
+
+  it('never-going-back-again preloaded file parses with guitar events', async () => {
+    const { result } = await parseGuitarProFile(
+      loadBuffer('public/preloaded/never-going-back-again.gp'),
+    );
+    const guitar = result.tracks.find((t) => t.isGuitar);
+    expect(guitar).toBeDefined();
+    const events = result.eventsByTrack.get(guitar!.index) ?? [];
+    expect(events.length).toBeGreaterThan(0);
+  });
+
+  it.each([
+    'ob-la-di-ob-la-da',
+    'wild-night',
+    'brown-eyed-girl',
+    'im-looking-through-you',
+    'sink-into-the-underground',
+    'flesh-into-gear',
+    'everlong',
+    'santeria',
+    'my-name-is-jonas',
+    'the-world-has-turned-and-left-me-here',
+    'snow-hey-oh',
+    'under-the-bridge',
+    'dont-stop-believin',
+    'could-you-be-loved',
+    'thunderstruck',
+    'money-for-nothing',
+    'free-bird',
+  ])('%s preloaded file parses with guitar events', async (id) => {
+    const { result } = await parseGuitarProFile(
+      loadBuffer(`public/preloaded/${id}.gp`),
+    );
+    const guitar = result.tracks.find((t) => t.isGuitar);
+    expect(guitar).toBeDefined();
+    const events = result.eventsByTrack.get(guitar!.index) ?? [];
+    expect(events.length).toBeGreaterThan(0);
+  });
 });

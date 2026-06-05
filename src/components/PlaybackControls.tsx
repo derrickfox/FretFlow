@@ -1,4 +1,5 @@
 import { formatTime } from '../utils/noteHelpers';
+import { primeAudioContextOnUserGesture } from '../utils/mobileAudio';
 import {
   LoopIcon,
   MetronomeIcon,
@@ -54,6 +55,11 @@ export function PlaybackControls({
   const loopStartMax = Math.max(loopEndMs - 500, 0);
   const loopEndMin = Math.min(loopStartMs + 500, max);
 
+  const handlePlayPause = () => {
+    primeAudioContextOnUserGesture();
+    onPlayPause();
+  };
+
   if (docked) {
     return (
       <section className={`${styles.panel} ${styles.panelDocked}`}>
@@ -62,7 +68,7 @@ export function PlaybackControls({
             <button
               type="button"
               className={styles.iconBtnPrimary}
-              onClick={onPlayPause}
+              onClick={handlePlayPause}
               disabled={!isReady}
               aria-label={isPlaying ? 'Pause' : 'Play'}
               title={isPlaying ? 'Pause' : 'Play'}
@@ -175,7 +181,7 @@ export function PlaybackControls({
         <button
           type="button"
           className={styles.primaryBtn}
-          onClick={onPlayPause}
+          onClick={handlePlayPause}
           disabled={!isReady}
         >
           {isPlaying ? 'Pause' : 'Play'}

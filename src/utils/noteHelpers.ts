@@ -9,18 +9,13 @@
 // Reason: Trails needs progressive upcoming glow and orangy-red decay after notes play.
 
 import type { DisplayMode, GuitarNoteEvent } from '../types/guitar';
+import {
+  midiToShortName,
+  openStringMidi,
+  pitchMidiForFrettedNote,
+} from './stringTuning';
 
 const QUARTER_TICKS = 960;
-
-/** Open-string MIDI (alphaTab string 1 = low E … 6 = high E). */
-const STANDARD_OPEN_MIDI: Record<number, number> = {
-  1: 40,
-  2: 45,
-  3: 50,
-  4: 55,
-  5: 59,
-  6: 64,
-};
 
 export function millisToTicks(ms: number, tempoBpm: number): number {
   if (ms <= 0 || tempoBpm <= 0) return 0;
@@ -29,26 +24,15 @@ export function millisToTicks(ms: number, tempoBpm: number): number {
 
 export function fretToNoteName(
   stringIndex: number,
-  fret: number,
-  tuningMidi?: number[],
+  tabFret: number,
+  tuningTopToBottom?: number[],
+  capo = 0,
 ): string | undefined {
-  let midi: number | undefined;
-
-  if (tuningMidi && stringIndex >= 1 && stringIndex <= tuningMidi.length) {
-    midi = tuningMidi[stringIndex - 1] + fret;
-  } else {
-    midi = STANDARD_OPEN_MIDI[stringIndex];
-    if (midi !== undefined) midi += fret;
-  }
-
-  if (midi === undefined) return undefined;
-  return midiToName(midi);
-}
-
-function midiToName(midi: number): string {
-  const names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-  const octave = Math.floor(midi / 12) - 1;
-  return `${names[((midi % 12) + 12) % 12]}${octave}`;
+  const tuning = tuningTopToBottom?.length
+    ? tuningTopToBottom
+    : [64, 59, 55, 50, 45, 40];
+  const pitch = pitchMidiForFrettedNote(stringIndex, tabFret, tuning, capo);
+  return pitch != null ? midiToShortName(pitch) : undefined;
 }
 
 /** Visual row index 0 = top string on neck (high E), 5 = low E — matches tab bottom-to-top flip. */

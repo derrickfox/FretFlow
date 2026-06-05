@@ -8,6 +8,7 @@
  */
 
 import { synth, type AlphaTabApi, type midi, type model } from '@coderline/alphatab';
+import { primeAudioContextOnUserGesture } from '../utils/mobileAudio';
 import { createTabPlayerApi } from './alphatabAdapter';
 
 export type PlaybackPosition = {
@@ -222,7 +223,7 @@ export class PlaybackEngine {
     return this.api?.playerState === synth.PlayerState.Playing;
   }
 
-  async play(): Promise<boolean> {
+  play(): boolean {
     const api = this.api;
     if (!api) return false;
     if (!this.songReady) {
@@ -231,11 +232,18 @@ export class PlaybackEngine {
       );
       return false;
     }
+    primeAudioContextOnUserGesture();
     try {
-      return api.play();
+      const started = api.play();
+      if (!started) {
+        this.callbacks.onError?.(
+          'Could not start playback. Tap Play again, and check that your device is not muted.',
+        );
+      }
+      return started;
     } catch {
       this.callbacks.onError?.(
-        'Could not start playback. Your browser may block autoplay until you interact with the page.',
+        'Could not start playback. Your browser may block audio until you interact with the page.',
       );
       return false;
     }
@@ -264,10 +272,9 @@ export class PlaybackEngine {
       return;
     }
 
-    void this.play().then((started) => {
-      if (!started) return;
+    if (this.play()) {
       this.callbacks.onState?.(true, this.songReady);
-    });
+    }
   }
 
   restart(): void {
