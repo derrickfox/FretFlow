@@ -112,11 +112,11 @@ export function loadScoreFromBytes(data: Uint8Array): ScoreLoadResult {
   } catch (err) {
     if (err instanceof importer.UnsupportedFormatError) {
       throw new Error(
-        'Unsupported Guitar Pro format. alphaTab supports GP3–GP8, GPX, and related formats.',
+        'Unsupported file format. FretFlow accepts Guitar Pro (GP3–GP8, GPX) and MusicXML (.xml, .musicxml, .mxl).',
         { cause: err },
       );
     }
-    throw new Error('Could not parse this Guitar Pro file. The file may be corrupt or encrypted.', {
+    throw new Error('Could not parse this score file. The file may be corrupt or encrypted.', {
       cause: err,
     });
   }

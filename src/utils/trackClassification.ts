@@ -56,6 +56,13 @@ export function classifyTrackKind(track: model.Track): TrackKind {
   const stringCount = staff?.tuning?.length ?? 0;
   const lowest = lowestOpenStringMidi(track);
 
+  // AI_CHANGE:
+  // Tool: Cursor
+  // Model: Composer
+  // Timestamp: 2026-06-05T15:05:00-04:00
+  // Purpose: Classify MusicXML guitar parts before the isStringed gate.
+  // Reason: MusicXML imports often omit staff tuning while still carrying tablature.
+  if (isGuitarName(name) && GUITAR_MIDI_PROGRAMS.has(program)) return 'guitar';
   if (isBassName(name) || BASS_MIDI_PROGRAMS.has(program)) return 'bass';
   if (stringCount > 0 && stringCount <= 5 && lowest != null && lowest <= 35) return 'bass';
 

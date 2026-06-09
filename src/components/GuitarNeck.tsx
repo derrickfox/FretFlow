@@ -89,22 +89,29 @@ export function GuitarNeck({
     const { noteLookaheadMs, noteLingerMs } = practice;
     const tempo = Math.max(playbackTempo, 40);
     const ahead = millisToTicks(noteLookaheadMs, tempo);
-    const baseWindow = getPlaybackTickWindow(
-      currentTick,
-      tempo,
-      displayMode,
-      noteLookaheadMs,
-      noteLingerMs,
-    );
-    const firstNoteTick = events[0]?.startTick;
-    const { start, end } = extendWindowForSongStart(
-      baseWindow,
-      currentTick,
-      firstNoteTick,
-      ahead,
-    );
-    const windowed = filterEventsInTickWindow(events, start, end);
     const linger = millisToTicks(noteLingerMs, tempo);
+
+    let windowed: GuitarNoteEvent[];
+    if (displayMode === 'all') {
+      windowed = events;
+    } else {
+      const baseWindow = getPlaybackTickWindow(
+        currentTick,
+        tempo,
+        displayMode,
+        noteLookaheadMs,
+        noteLingerMs,
+      );
+      const firstNoteTick = events[0]?.startTick;
+      const { start, end } = extendWindowForSongStart(
+        baseWindow,
+        currentTick,
+        firstNoteTick,
+        ahead,
+      );
+      windowed = filterEventsInTickWindow(events, start, end);
+    }
+
     const trailsGlow =
       displayMode === 'trails'
         ? trailsGlowFromPractice(practice.trailsPeakGlow, 100)

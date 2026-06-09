@@ -13,6 +13,7 @@ import {
   getTrackTuningMidi,
   loadScoreFromBytes,
 } from './alphatabAdapter';
+import { extractChordVoicingEvents, trackHasChordBeats } from '../utils/chordEvents';
 import { classifyTrackKind } from '../utils/trackClassification';
 import { extractNoteBendInfo } from '../utils/bendDisplay';
 import { fretToNoteName } from '../utils/noteHelpers';
@@ -38,11 +39,34 @@ export function refreshEventsFromTickCache(
   return buildParseResult(score, tickLookup, result.tracks);
 }
 
+function resolveTrackEvents(
+  track: model.Track,
+  trackIndex: number,
+  tickLookup: midi.MidiTickLookup,
+): { events: GuitarNoteEvent[]; isChordSheet: boolean } {
+  const tabEvents = extractTabNoteEvents(track, trackIndex, tickLookup);
+  if (tabEvents.length > 0) {
+    return { events: tabEvents, isChordSheet: false };
+  }
+  const chordEvents = trackHasChordBeats(track)
+    ? extractChordVoicingEvents(track, trackIndex, tickLookup)
+    : [];
+  return { events: chordEvents, isChordSheet: chordEvents.length > 0 };
+}
+
 function buildParseResult(
   score: model.Score,
   tickLookup: midi.MidiTickLookup,
   existingTracks?: TrackInfo[],
 ): ParseResult {
+  const eventsByTrack = new Map<number, GuitarNoteEvent[]>();
+  const trackEventsMeta = new Map<number, { isChordSheet: boolean }>();
+  for (const track of score.tracks) {
+    const { events, isChordSheet } = resolveTrackEvents(track, track.index, tickLookup);
+    eventsByTrack.set(track.index, events);
+    trackEventsMeta.set(track.index, { isChordSheet });
+  }
+
   const tracks: TrackInfo[] =
     existingTracks ??
     score.tracks.map((track, index) => {
@@ -50,24 +74,21 @@ function buildParseResult(
       const stringCount = staff?.tuning?.length ?? 6;
       const kind = classifyTrackKind(track);
       const tuningMidi = [...(staff?.tuning ?? [])];
+      const isChordSheet = trackEventsMeta.get(track.index)?.isChordSheet ?? false;
       return {
         index,
         name: track.name || `Track ${index + 1}`,
         shortName: track.shortName || track.name || `T${index + 1}`,
         kind,
-        isGuitar: kind === 'guitar',
-        isGuitarLike: kind === 'guitar' || kind === 'bass',
+        isGuitar: kind === 'guitar' || isChordSheet,
+        isChordSheet,
+        isGuitarLike: kind === 'guitar' || kind === 'bass' || isChordSheet,
         stringCount: Math.max(stringCount, 6),
         capo: staff?.capo ?? 0,
         tuningMidi,
         tuningName: staff?.tuningName || undefined,
       };
     });
-
-  const eventsByTrack = new Map<number, GuitarNoteEvent[]>();
-  for (const track of score.tracks) {
-    eventsByTrack.set(track.index, extractTrackEvents(track, track.index, tickLookup));
-  }
 
   const metadata: SongMetadata = {
     title: score.title || score.album || 'Untitled',
@@ -97,7 +118,7 @@ function computeDurationMs(eventsByTrack: Map<number, GuitarNoteEvent[]>): numbe
 // Timestamp: 2026-06-05T22:30:00-04:00
 // Purpose: Expand note events from MidiTickLookup.masterBars so repeat passes get playback ticks.
 // Reason: getBeatStart() is first-pass only; after a GP repeat, player currentTick leaves event ticks behind.
-function extractTrackEvents(
+function extractTabNoteEvents(
   track: model.Track,
   trackIndex: number,
   tickLookup: midi.MidiTickLookup,

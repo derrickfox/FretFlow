@@ -120,17 +120,13 @@ function App() {
   // AI_CHANGE:
   // Tool: Cursor
   // Model: Composer
-  // Timestamp: 2026-06-04T23:45:00-04:00
-  // Purpose: Tab strip loads only guitar-classified tracks; audio still uses speaker toggles on full score.
-  // Reason: Non-guitar staves (bass, vocals, drums) should not appear in the notation panel.
-  /** All detected guitar tracks for tab notation (excludes bass, vocals, drums). */
+  // Timestamp: 2026-06-08T14:15:00-04:00
+  // Purpose: Tab notation follows the guitar-icon fretboard selection only.
+  // Reason: Extra staves in the tab strip confused users when those tracks were off the neck.
   const tabNotationTracks = useMemo(() => {
-    if (!parseResult) return [];
-    return parseResult.tracks
-      .filter((t) => t.isGuitar)
-      .map((t) => t.index)
-      .sort((a, b) => a - b);
-  }, [parseResult?.tracks]);
+    if (!parseResult || neckTracks.length === 0) return [];
+    return [...neckTracks].sort((a, b) => a - b);
+  }, [parseResult, neckTracks]);
 
   /** Stable key so tick-cache refresh does not retrigger alphaTab load. */
   const tabNotationTracksKey = tabNotationTracks.join(',');
@@ -192,9 +188,18 @@ function App() {
   useEffect(() => {
     const host = tabHostRef.current;
     const scroll = tabScrollRef.current;
-    if (!host || !scroll || !fileBytes || tabNotationTracks.length === 0) return;
+    if (!host || !scroll || !fileBytes) return;
+
+    if (tabNotationTracks.length === 0) return;
 
     setPlaybackError(null);
+
+    if (playbackEngine.hasLoadedScore(fileBytes)) {
+      playbackEngine.setDisplayTracks(tabNotationTracks, host, scroll);
+      playbackEngine.syncAudioTracks(audioTracks);
+      return;
+    }
+
     setIsReady(false);
     playbackEngine.loadFromBytes(
       fileBytes,
@@ -206,7 +211,7 @@ function App() {
     playbackEngine.setSpeed(speed);
     playbackEngine.setMetronome(metronomeOn);
     playbackEngine.setLoop(practice.loopEnabled, practice.loopStartMs, practice.loopEndMs);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload song file only
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload score once; neck changes use renderTracks
   }, [fileBytes, tabNotationTracksKey]);
 
   useEffect(() => {
@@ -255,7 +260,9 @@ function App() {
         (t) => (result.eventsByTrack.get(t.index)?.length ?? 0) === 0,
       );
       if (eventsEmpty) {
-        throw new Error('No tab notes found in this file. The track may be empty or non-fretted.');
+        throw new Error(
+          'No playable notes found. Add guitar tablature or chord symbols with supported voicings.',
+        );
       }
 
       setParseResult(result);
@@ -409,7 +416,7 @@ function App() {
               )
             ) : (
               <div className={styles.emptyStage}>
-                <p>Upload a Guitar Pro file to see the fretboard.</p>
+                <p>Upload a Guitar Pro or MusicXML file to see the fretboard.</p>
               </div>
             )}
 
@@ -493,6 +500,8 @@ function App() {
                     Bend amount labels
                   </label>
                 </div>
+                {displayMode !== 'all' ? (
+                  <>
                 <label className={styles.lookaheadRow}>
                   <span className={styles.lookaheadLabel}>
                     Notes ahead{' '}
@@ -543,6 +552,8 @@ function App() {
                     <span>stay longer</span>
                   </span>
                 </label>
+                  </>
+                ) : null}
                 <div className={styles.modeRow}>
                   <span>Display</span>
                   <button
@@ -558,6 +569,13 @@ function App() {
                     onClick={() => setDisplayMode('trails')}
                   >
                     Trails
+                  </button>
+                  <button
+                    type="button"
+                    className={displayMode === 'all' ? styles.modeActive : styles.modeBtn}
+                    onClick={() => setDisplayMode('all')}
+                  >
+                    All
                   </button>
                 </div>
                 {displayMode === 'trails' ? (

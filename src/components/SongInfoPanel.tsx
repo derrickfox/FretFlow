@@ -21,7 +21,7 @@ export function SongInfoPanel({
   if (!metadata) {
     return (
       <section className={styles.panel}>
-        <p className={styles.placeholder}>Upload a Guitar Pro file to see song info.</p>
+        <p className={styles.placeholder}>Upload a tab file to see song info.</p>
       </section>
     );
   }

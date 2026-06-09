@@ -329,6 +329,17 @@ const PRELOADED_SONGS_RAW: PreloadedSong[] = [
     label: 'All Along The Watchtower — The Jimi Hendrix Experience',
     url: assetUrl('preloaded/all-along-the-watchtower.gp'),
   },
+  // AI_CHANGE:
+  // Tool: Cursor
+  // Model: Composer
+  // Timestamp: 2026-06-05T15:20:00-04:00
+  // Purpose: Adds Robert Johnson lead sheet as first MusicXML preloaded song.
+  // Reason: User provided Come On In My Kitchen from iReal Pro for the demo library.
+  {
+    id: 'come-on-in-my-kitchen',
+    label: 'Come On In My Kitchen — Robert Johnson',
+    url: assetUrl('preloaded/come-on-in-my-kitchen.musicxml'),
+  },
 ];
 
 // AI_CHANGE:

@@ -96,6 +96,19 @@ export function classifyNoteAtTime(
   lingerTicks: number,
   trailsGlow?: TrailsGlowSettings,
 ): ClassifiedNote | null {
+  // AI_CHANGE:
+  // Tool: Cursor
+  // Model: Composer
+  // Timestamp: 2026-06-08T14:05:00-04:00
+  // Purpose: All mode keeps every note visible; playback still highlights the active one.
+  // Reason: User requested a display type that maps the full song onto the fretboard at once.
+  if (mode === 'all') {
+    if (currentTick >= note.startTick && currentTick < note.endTick) {
+      return { state: 'active', intensity: 1 };
+    }
+    return { state: 'full', intensity: 1 };
+  }
+
   if (mode === 'trails') {
     const glow =
       trailsGlow ?? trailsGlowFromPractice(100, 100);
@@ -243,7 +256,29 @@ export const GP_EXTENSIONS = [
   '.gp7',
 ] as const;
 
+// AI_CHANGE:
+// Tool: Cursor
+// Model: Composer
+// Timestamp: 2026-06-05T15:00:00-04:00
+// Purpose: Accept MusicXML uploads alongside Guitar Pro in the file picker.
+// Reason: alphaTab already imports .xml, .musicxml, and .mxl via ScoreLoader.
+export const MUSICXML_EXTENSIONS = ['.xml', '.musicxml', '.mxl'] as const;
+
+export const SUPPORTED_SCORE_EXTENSIONS = [
+  ...GP_EXTENSIONS,
+  ...MUSICXML_EXTENSIONS,
+] as const;
+
 export function isValidGpExtension(filename: string): boolean {
   const lower = filename.toLowerCase();
   return GP_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
+export function isValidScoreExtension(filename: string): boolean {
+  const lower = filename.toLowerCase();
+  return SUPPORTED_SCORE_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
+export function formatSupportedScoreExtensions(): string {
+  return SUPPORTED_SCORE_EXTENSIONS.join(', ');
 }

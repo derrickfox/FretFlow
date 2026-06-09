@@ -1,5 +1,9 @@
 import { useCallback, useRef, useState } from 'react';
-import { GP_EXTENSIONS, isValidGpExtension } from '../utils/noteHelpers';
+import {
+  formatSupportedScoreExtensions,
+  isValidScoreExtension,
+  SUPPORTED_SCORE_EXTENSIONS,
+} from '../utils/noteHelpers';
 import styles from './FileUploader.module.css';
 
 type FileUploaderProps = {
@@ -24,8 +28,10 @@ export function FileUploader({
   const validateAndEmit = useCallback(
     (file: File | undefined) => {
       if (!file) return;
-      if (!isValidGpExtension(file.name)) {
-        setLocalError(`Please choose a Guitar Pro file (${GP_EXTENSIONS.join(', ')})`);
+      if (!isValidScoreExtension(file.name)) {
+        setLocalError(
+          `Please choose a Guitar Pro or MusicXML file (${formatSupportedScoreExtensions()})`,
+        );
         return;
       }
       setLocalError(null);
@@ -43,7 +49,7 @@ export function FileUploader({
     [validateAndEmit],
   );
 
-  const extList = GP_EXTENSIONS.join(', ');
+  const extList = formatSupportedScoreExtensions();
 
   const sectionClass = [styles.section, compact ? styles.sectionCompact : '']
     .filter(Boolean)
@@ -77,20 +83,20 @@ export function FileUploader({
         <input
           ref={inputRef}
           type="file"
-          accept={GP_EXTENSIONS.join(',')}
+          accept={SUPPORTED_SCORE_EXTENSIONS.join(',')}
           className={styles.hiddenInput}
           onChange={(e) => validateAndEmit(e.target.files?.[0])}
         />
         {loading ? (
-          <p className={styles.primary}>Parsing Guitar Pro file…</p>
+          <p className={styles.primary}>Parsing score file…</p>
         ) : compact ? (
           <>
-            <p className={styles.primary}>Drop a Guitar Pro file or click to browse</p>
+            <p className={styles.primary}>Drop a tab file or click to browse</p>
             <p className={styles.formatsCompact}>Supported: {extList}</p>
           </>
         ) : (
           <>
-            <p className={styles.primary}>Drop a Guitar Pro file here</p>
+            <p className={styles.primary}>Drop a Guitar Pro or MusicXML file here</p>
             <p className={styles.secondary}>or click to browse</p>
             <p className={styles.formats}>Supported: {extList}</p>
           </>

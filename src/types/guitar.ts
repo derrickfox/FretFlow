@@ -34,6 +34,8 @@ export type TrackInfo = {
   kind: TrackKind;
   /** True when kind is guitar (not bass, vocals, drums, etc.). */
   isGuitar: boolean;
+  /** Harmony-only lead sheet — voicings synthesized for the fretboard. */
+  isChordSheet?: boolean;
   /** @deprecated Use kind / isGuitar — kept for compatibility */
   isGuitarLike: boolean;
   stringCount: number;
@@ -57,8 +59,8 @@ export type ParseResult = {
   metadata: SongMetadata;
 };
 
-/** Standard: fixed upcoming/active styling. Trails: ramp-up before cue, ember fade after. */
-export type DisplayMode = 'standard' | 'trails';
+/** Standard: fixed upcoming/active styling. Trails: ramp-up before cue, ember fade after. All: whole song on the neck. */
+export type DisplayMode = 'standard' | 'trails' | 'all';
 
 export type PracticeSettings = {
   showNoteNames: boolean;

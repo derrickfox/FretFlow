@@ -31,6 +31,7 @@ export function NoteDot({
   bend,
 }: NoteDotProps) {
   const trails = displayMode === 'trails';
+  const allMode = displayMode === 'all';
   const classNames = [
     styles.dot,
     useCustomColors ? styles.customColors : '',
@@ -38,6 +39,7 @@ export function NoteDot({
     useCustomColors && state === 'smolder' && trails ? styles.customSmolderAnim : '',
     !useCustomColors && colors && state !== 'past' ? styles.custom : '',
     !useCustomColors && trails ? styles.trails : '',
+    !useCustomColors && allMode ? styles.all : '',
     !useCustomColors ? styles[state] : '',
     bend ? styles.hasBend : '',
     leftHanded ? styles.leftHanded : '',
@@ -49,7 +51,7 @@ export function NoteDot({
     ? customStyle
     : colors && state !== 'past' && state !== 'smolder'
       ? {
-          ...stateStyle(state, colors, intensity, trails),
+          ...stateStyle(state, colors, intensity, trails, allMode),
           ...(trails && state !== 'full'
             ? ({ '--trail-intensity': String(intensity) } as CSSProperties)
             : undefined),
@@ -86,6 +88,7 @@ function stateStyle(
   colors: TrackNoteColors,
   intensity: number,
   trails: boolean,
+  allMode: boolean,
 ): CSSProperties | undefined {
   const i = trails ? intensity : 1;
   switch (state) {
@@ -111,6 +114,7 @@ function stateStyle(
       return {
         background: colors.fullBg,
         border: `1px solid ${colors.fullBorder}`,
+        opacity: allMode ? 0.55 : undefined,
         zIndex: 1,
       };
     default:

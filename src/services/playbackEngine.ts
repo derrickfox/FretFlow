@@ -43,6 +43,7 @@ export class PlaybackEngine {
   private songReady = false;
   private audioTrackIndices: number[] = [];
   private mountedDisplayCount = 0;
+  private scoreBytes: Uint8Array | null = null;
 
   attachCallbacks(callbacks: PlaybackEngineCallbacks): void {
     this.callbacks = callbacks;
@@ -148,8 +149,9 @@ export class PlaybackEngine {
     host: HTMLElement,
     scrollElement: HTMLElement,
   ): void {
+    this.scoreBytes = data;
     this.audioTrackIndices = [...audioTrackIndexes];
-    this.ensureMounted(host, scrollElement, displayTrackIndexes.length);
+    this.ensureMounted(host, scrollElement, Math.max(displayTrackIndexes.length, 1));
 
     const api = this.api;
     if (!api) {
@@ -185,6 +187,52 @@ export class PlaybackEngine {
         err instanceof Error ? err.message : 'Failed to load song for playback',
       );
     }
+  }
+
+  hasLoadedScore(data: Uint8Array): boolean {
+    return this.scoreBytes === data && this.api?.score != null;
+  }
+
+  // AI_CHANGE:
+  // Tool: Cursor
+  // Model: Composer
+  // Timestamp: 2026-06-08T14:15:00-04:00
+  // Purpose: Re-render tab notation when fretboard track selection changes.
+  // Reason: Tab strip should match guitar-icon selection without reloading the whole score.
+  setDisplayTracks(
+    displayTrackIndexes: number[],
+    host: HTMLElement,
+    scrollElement: HTMLElement,
+  ): void {
+    if (!this.scoreBytes) return;
+
+    if (displayTrackIndexes.length === 0) {
+      return;
+    }
+
+    const api = this.api;
+    if (api?.score && this.mountedDisplayCount === displayTrackIndexes.length) {
+      const tracks = displayTrackIndexes
+        .map((index) => api.score!.tracks[index])
+        .filter((track): track is model.Track => track != null);
+      if (tracks.length === 0) return;
+
+      const time = this.currentMsCached;
+      api.renderTracks(tracks);
+      requestAnimationFrame(() => requestAnimationFrame(() => this.requestRender()));
+      if (time > 0) {
+        api.timePosition = time;
+      }
+      return;
+    }
+
+    this.loadFromBytes(
+      this.scoreBytes,
+      displayTrackIndexes,
+      this.audioTrackIndices,
+      host,
+      scrollElement,
+    );
   }
 
   /** Mute/unmute score tracks to match speaker toggles (tab can show more tracks than play). */
@@ -344,6 +392,7 @@ export class PlaybackEngine {
     this.api = null;
     this.eventsWired = false;
     this.songReady = false;
+    this.scoreBytes = null;
     this.currentMsCached = 0;
     this.currentTickCached = 0;
     this.callbacks.onState?.(false, false);

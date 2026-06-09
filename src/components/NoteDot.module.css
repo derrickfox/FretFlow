@@ -75,6 +75,16 @@
   z-index: 1;
 }
 
+/* All mode: static song map — dimmer fill so the live note pops during playback. */
+.all.full {
+  opacity: 0.55;
+}
+
+.all.active {
+  opacity: 1;
+  z-index: 3;
+}
+
 .past {
   opacity: 0.15;
   background: rgba(80, 80, 90, 0.4);

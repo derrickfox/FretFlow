@@ -115,7 +115,7 @@ export function TrackSelector({
       </ul>
 
       {neckTrackIndices.length === 0 ? (
-        <p className={styles.hint}>Enable a guitar icon to show notes on the fretboard.</p>
+        <p className={styles.hint}>Enable a guitar icon to show notes on the fretboard and tab.</p>
       ) : null}
       {audioTrackIndices.length === 0 ? (
         <p className={styles.hint}>Enable a speaker icon to hear playback.</p>
