@@ -12,6 +12,8 @@ type FileUploaderProps = {
   error: string | null;
   /** Compact layout for the app header */
   compact?: boolean;
+  /** Single-line header toolbar — no format list */
+  compactHeader?: boolean;
 };
 
 export function FileUploader({
@@ -19,6 +21,7 @@ export function FileUploader({
   loading,
   error,
   compact = false,
+  compactHeader = false,
 }: FileUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -57,16 +60,20 @@ export function FileUploader({
   const dropzoneClass = [
     styles.dropzone,
     compact ? styles.dropzoneCompact : '',
+    compactHeader ? styles.dropzoneHeader : '',
     dragOver ? styles.dragOver : '',
     loading ? styles.loading : '',
   ]
     .filter(Boolean)
     .join(' ');
 
+  const formatHint = `Supported: ${extList}`;
+
   return (
     <section className={sectionClass}>
       <div
         className={dropzoneClass}
+        title={compactHeader ? formatHint : undefined}
         onDragOver={(e) => {
           e.preventDefault();
           setDragOver(true);
@@ -89,6 +96,8 @@ export function FileUploader({
         />
         {loading ? (
           <p className={styles.primary}>Parsing score file…</p>
+        ) : compactHeader ? (
+          <p className={styles.primaryHeader}>Upload tab file</p>
         ) : compact ? (
           <>
             <p className={styles.primary}>Drop a tab file or click to browse</p>
@@ -103,7 +112,9 @@ export function FileUploader({
         )}
       </div>
       {localError || error ? (
-        <p className={styles.error}>{localError ?? error}</p>
+        <p className={compactHeader ? styles.errorCompact : styles.error}>
+          {localError ?? error}
+        </p>
       ) : null}
     </section>
   );

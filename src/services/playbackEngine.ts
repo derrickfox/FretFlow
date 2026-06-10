@@ -44,6 +44,8 @@ export class PlaybackEngine {
   private audioTrackIndices: number[] = [];
   private mountedDisplayCount = 0;
   private scoreBytes: Uint8Array | null = null;
+  private displayTrackIndices: number[] = [];
+  private tabResizeObserver: ResizeObserver | null = null;
 
   attachCallbacks(callbacks: PlaybackEngineCallbacks): void {
     this.callbacks = callbacks;
@@ -55,14 +57,36 @@ export class PlaybackEngine {
 
   /** Create alphaTab only when needed (keeps initial page load light and crash-free). */
   ensureMounted(container: HTMLElement, scrollElement: HTMLElement, displayedTrackCount: number): void {
-    if (this.api && this.mountedDisplayCount !== displayedTrackCount) {
-      this.destroy();
-    }
     if (!this.api) {
-      this.api = createTabPlayerApi(container, scrollElement, displayedTrackCount);
-      this.mountedDisplayCount = displayedTrackCount;
+      const layoutTracks = Math.max(displayedTrackCount, 1);
+      this.api = createTabPlayerApi(container, scrollElement, layoutTracks);
+      this.mountedDisplayCount = layoutTracks;
       this.wireEvents();
     }
+  }
+
+  /** Keep playhead and play/pause state across tab re-renders. */
+  private withPlaybackPreserved(run: () => void): void {
+    const api = this.api;
+    if (!api) return;
+
+    const wasPlaying = this.isPlaying;
+    const time = this.currentMsCached;
+
+    run();
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (time > 0) {
+          api.timePosition = time;
+          this.currentMsCached = time;
+        }
+        if (wasPlaying && api.playerState !== synth.PlayerState.Playing) {
+          void api.play();
+        }
+        this.callbacks.onState?.(this.isPlaying, this.songReady);
+      });
+    });
   }
 
   private wireEvents(): void {
@@ -78,6 +102,9 @@ export class PlaybackEngine {
         /* use cached total from parse */
       }
       this.syncAudioTracks(this.audioTrackIndices);
+      if (this.displayTrackIndices.length > 0) {
+        this.paintDisplayTracks(this.displayTrackIndices);
+      }
       const tickCache = api.tickCache;
       const score = api.score;
       if (tickCache && score) {
@@ -123,6 +150,50 @@ export class PlaybackEngine {
     api.error.on((err: Error) => {
       this.callbacks.onError?.(err.message ?? 'Playback error');
     });
+
+    // AI_CHANGE:
+    // Tool: Cursor
+    // Model: Composer
+    // Timestamp: 2026-06-04T23:45:00-04:00
+    // Purpose: Re-layout tab notation when the scroll panel width changes.
+    // Reason: Stale page width during playback left the active system clipped on the right.
+    api.postRenderFinished.on(() => {
+      this.syncTabSurfaceOverflow();
+    });
+  }
+
+  private observeTabPanelResize(scrollElement: HTMLElement): void {
+    this.tabResizeObserver?.disconnect();
+    if (typeof ResizeObserver === 'undefined') return;
+
+    let resizeFrame = 0;
+    this.tabResizeObserver = new ResizeObserver(() => {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        const api = this.api;
+        if (!api?.score) return;
+        try {
+          api.resizeRender();
+        } catch {
+          /* render may defer until fonts load */
+        }
+      });
+    });
+    this.tabResizeObserver.observe(scrollElement);
+  }
+
+  /** Match alphaTab Smooth-scroll canvas padding so glyphs past the last bar stay visible. */
+  private syncTabSurfaceOverflow(): void {
+    const api = this.api;
+    if (!api?.canvasElement) return;
+
+    const canvas = api.canvasElement as { element?: HTMLElement };
+    const surface = canvas.element;
+    if (!surface?.classList.contains('at-surface')) return;
+
+    surface.style.overflow = 'visible';
+    surface.style.boxSizing = 'content-box';
+    surface.style.paddingRight = '48px';
   }
 
   private markSongReady(): void {
@@ -132,14 +203,47 @@ export class PlaybackEngine {
   }
 
   /** Re-layout notation when the tab host gains size (alphaTab skips render at width 0). */
-  requestRender(): void {
+  requestRender(force = false): void {
     const api = this.api;
-    if (!api?.score || this.isPlaying) return;
+    if (!api?.score) return;
+    if (!force && this.isPlaying) return;
     try {
       api.render();
     } catch {
       /* render may defer until fonts load */
     }
+  }
+
+  private resolveScoreTracks(trackIndices: number[]): model.Track[] {
+    const api = this.api;
+    if (!api?.score) return [];
+
+    const byIndex = new Map(api.score.tracks.map((track) => [track.index, track]));
+    return trackIndices
+      .map((index) => byIndex.get(index))
+      .filter((track): track is model.Track => track != null);
+  }
+
+  private syncTabLayoutSettings(displayedTrackCount: number): void {
+    const api = this.api;
+    if (!api) return;
+
+    const multi = displayedTrackCount > 1;
+    api.settings.display.staveProfile = multi ? 'TabMixed' : 'Tab';
+    api.settings.display.barsPerRow = multi ? 2 : 4;
+    api.updateSettings();
+  }
+
+  private paintDisplayTracks(trackIndices: number[]): void {
+    const api = this.api;
+    if (!api?.score) return;
+
+    const tracks = this.resolveScoreTracks(trackIndices);
+    if (tracks.length === 0) return;
+
+    this.syncTabLayoutSettings(tracks.length);
+    // renderTracks already triggers a full render; a second render() mid-playback can leave partials clipped.
+    api.renderTracks(tracks);
   }
 
   loadFromBytes(
@@ -148,10 +252,18 @@ export class PlaybackEngine {
     audioTrackIndexes: number[],
     host: HTMLElement,
     scrollElement: HTMLElement,
+    /** Load every score track so later toggles can use renderTracks without reloading. */
+    scoreTrackIndexes?: number[],
   ): void {
     this.scoreBytes = data;
+    this.displayTrackIndices = [...displayTrackIndexes];
     this.audioTrackIndices = [...audioTrackIndexes];
-    this.ensureMounted(host, scrollElement, Math.max(displayTrackIndexes.length, 1));
+    this.ensureMounted(
+      host,
+      scrollElement,
+      Math.max(displayTrackIndexes.length, scoreTrackIndexes?.length ?? 1),
+    );
+    this.observeTabPanelResize(scrollElement);
 
     const api = this.api;
     if (!api) {
@@ -165,10 +277,15 @@ export class PlaybackEngine {
       this.currentMsCached = 0;
       this.callbacks.onState?.(false, false);
 
+      const loadIndexes =
+        scoreTrackIndexes && scoreTrackIndexes.length > 0
+          ? scoreTrackIndexes
+          : displayTrackIndexes;
+
       const loadTracks = () => {
         const ok = api.load(
           data,
-          displayTrackIndexes.length > 0 ? displayTrackIndexes : undefined,
+          loadIndexes.length > 0 ? loadIndexes : undefined,
         );
         if (!ok) {
           this.callbacks.onError?.('Unsupported file data for playback');
@@ -196,48 +313,38 @@ export class PlaybackEngine {
   // AI_CHANGE:
   // Tool: Cursor
   // Model: Composer
-  // Timestamp: 2026-06-08T14:15:00-04:00
-  // Purpose: Re-render tab notation when fretboard track selection changes.
-  // Reason: Tab strip should match guitar-icon selection without reloading the whole score.
+  // Timestamp: 2026-06-10T18:10:00-04:00
+  // Purpose: Swap tab tracks without tearing down the player or resetting the playhead.
+  // Reason: User toggling neck tracks should not stop playback and jump to the start.
   setDisplayTracks(
     displayTrackIndexes: number[],
-    host: HTMLElement,
-    scrollElement: HTMLElement,
+    _host: HTMLElement,
+    _scrollElement: HTMLElement,
   ): void {
-    if (!this.scoreBytes) return;
+    if (displayTrackIndexes.length === 0) return;
 
-    if (displayTrackIndexes.length === 0) {
-      return;
-    }
+    this.displayTrackIndices = [...displayTrackIndexes];
 
     const api = this.api;
-    if (api?.score && this.mountedDisplayCount === displayTrackIndexes.length) {
-      const tracks = displayTrackIndexes
-        .map((index) => api.score!.tracks[index])
-        .filter((track): track is model.Track => track != null);
-      if (tracks.length === 0) return;
+    if (!api?.score) return;
 
-      const time = this.currentMsCached;
-      api.renderTracks(tracks);
-      requestAnimationFrame(() => requestAnimationFrame(() => this.requestRender()));
-      if (time > 0) {
-        api.timePosition = time;
-      }
-      return;
-    }
-
-    this.loadFromBytes(
-      this.scoreBytes,
-      displayTrackIndexes,
-      this.audioTrackIndices,
-      host,
-      scrollElement,
-    );
+    this.withPlaybackPreserved(() => {
+      this.paintDisplayTracks(displayTrackIndexes);
+    });
   }
 
   /** Mute/unmute score tracks to match speaker toggles (tab can show more tracks than play). */
   syncAudioTracks(audioTrackIndexes: number[]): void {
     this.audioTrackIndices = [...audioTrackIndexes];
+    const apply = () => this.applyAudioTrackMute(audioTrackIndexes);
+    if (this.songReady) {
+      this.withPlaybackPreserved(apply);
+    } else {
+      apply();
+    }
+  }
+
+  private applyAudioTrackMute(audioTrackIndexes: number[]): void {
     const api = this.api;
     if (!api?.score) return;
 
@@ -380,6 +487,9 @@ export class PlaybackEngine {
   }
 
   destroy(): void {
+    this.tabResizeObserver?.disconnect();
+    this.tabResizeObserver = null;
+
     const api = this.api;
     if (api) {
       this.stopPlayback();

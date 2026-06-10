@@ -32,6 +32,34 @@
   text-align: left;
 }
 
+/* AI_CHANGE:
+   Tool: Cursor
+   Model: Composer
+   Timestamp: 2026-06-04T23:55:00-04:00
+   Purpose: Single-line upload control for compact header toolbar.
+   Reason: Two-line dropzone with format list dominated header height. */
+.dropzoneHeader {
+  padding: 0.32rem 0.65rem;
+  border-width: 1px;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.primaryHeader {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #e8ecf8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.errorCompact {
+  margin: 0.25rem 0 0;
+  font-size: 0.72rem;
+}
+
 .dropzoneCompact .primary {
   margin: 0;
   font-size: 0.9rem;

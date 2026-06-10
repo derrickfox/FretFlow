@@ -81,6 +81,13 @@ export function createTabPlayerSettings(
       staveProfile: displayedTrackCount > 1 ? 'TabMixed' : 'Tab',
       layoutMode: 'Page',
       barsPerRow: displayedTrackCount > 1 ? 2 : 4,
+      // AI_CHANGE:
+      // Tool: Cursor
+      // Model: Composer
+      // Timestamp: 2026-06-04T23:45:00-04:00
+      // Purpose: Extra right inset so bend/slide glyphs on the last bar are not clipped.
+      // Reason: Page layout scales bars to container width; articulations extend past bar bounds.
+      padding: [10, 10, 44, 10],
       resources: {
         staffLineColor: 'rgb(70, 76, 92)',
         barSeparatorColor: 'rgb(22, 26, 36)',

@@ -41,7 +41,7 @@ function App() {
   const [playbackError, setPlaybackError] = useState<string | null>(null);
   const [neckTracks, setNeckTracks] = useState<number[]>([]);
   const [audioTracks, setAudioTracks] = useState<number[]>([]);
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('trails');
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('all');
   const [practice, setPractice] = useState<PracticeSettings>(DEFAULT_PRACTICE);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isReady, setIsReady] = useState(false);
@@ -207,6 +207,7 @@ function App() {
       audioTracks,
       host,
       scroll,
+      parseResult?.tracks.map((t) => t.index),
     );
     playbackEngine.setSpeed(speed);
     playbackEngine.setMetronome(metronomeOn);
@@ -341,6 +342,7 @@ function App() {
         </div>
         <div className={styles.headerCenter}>
           <PreloadedSongsSelect
+            compact
             songs={PRELOADED_SONGS}
             selectedId={preloadedSongId}
             loading={loading}
@@ -350,6 +352,7 @@ function App() {
         <div className={styles.headerUpload}>
           <FileUploader
             compact
+            compactHeader
             onFileSelected={handleFile}
             loading={loading}
             error={parseError}

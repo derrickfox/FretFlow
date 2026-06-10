@@ -6,6 +6,8 @@ type PreloadedSongsSelectProps = {
   selectedId: string | null;
   loading: boolean;
   onSelect: (id: string) => void;
+  /** Inline label + select for compact header toolbar */
+  compact?: boolean;
 };
 
 export function PreloadedSongsSelect({
@@ -13,15 +15,16 @@ export function PreloadedSongsSelect({
   selectedId,
   loading,
   onSelect,
+  compact = false,
 }: PreloadedSongsSelectProps) {
   return (
-    <div className={styles.wrap}>
-      <label className={styles.label} htmlFor="preloaded-songs">
+    <div className={compact ? styles.wrapInline : styles.wrap}>
+      <label className={compact ? styles.labelInline : styles.label} htmlFor="preloaded-songs">
         Sample songs
       </label>
       <select
         id="preloaded-songs"
-        className={styles.select}
+        className={compact ? styles.selectInline : styles.select}
         value={selectedId ?? ''}
         disabled={loading}
         onChange={(e) => {

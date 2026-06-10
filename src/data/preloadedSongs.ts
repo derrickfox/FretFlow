@@ -340,6 +340,17 @@ const PRELOADED_SONGS_RAW: PreloadedSong[] = [
     label: 'Come On In My Kitchen — Robert Johnson',
     url: assetUrl('preloaded/come-on-in-my-kitchen.musicxml'),
   },
+  // AI_CHANGE:
+  // Tool: Cursor
+  // Model: Composer
+  // Timestamp: 2026-06-10T17:55:00-04:00
+  // Purpose: Adds Bad To The Bone to the preloaded sample library.
+  // Reason: User provided George Thorogood GP file for the demo picker.
+  {
+    id: 'bad-to-the-bone',
+    label: 'Bad To The Bone — George Thorogood & The Destroyers',
+    url: assetUrl('preloaded/bad-to-the-bone.gp'),
+  },
 ];
 
 // AI_CHANGE:

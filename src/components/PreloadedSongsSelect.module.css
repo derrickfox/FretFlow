@@ -30,3 +30,43 @@
   opacity: 0.55;
   cursor: wait;
 }
+
+/* AI_CHANGE:
+   Tool: Cursor
+   Model: Composer
+   Timestamp: 2026-06-04T23:55:00-04:00
+   Purpose: Inline sample-song picker for compact header row.
+   Reason: Stacked label + select added unnecessary header height. */
+.wrapInline {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.labelInline {
+  font-size: 0.72rem;
+  color: rgba(180, 190, 220, 0.85);
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.selectInline {
+  background: #1e2438;
+  color: #e8ecf8;
+  border: 1px solid rgba(120, 140, 200, 0.4);
+  border-radius: 6px;
+  padding: 0.32rem 0.5rem;
+  font-size: 0.82rem;
+  min-width: 0;
+  flex: 1;
+  cursor: pointer;
+}
+
+.selectInline:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
