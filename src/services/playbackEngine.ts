@@ -7,7 +7,7 @@
  * (getter returns this.loadedMidiInfo). Use playerReady instead.
  */
 
-import { synth, type AlphaTabApi, type midi, type model } from '@coderline/alphatab';
+import { StaveProfile, synth, type AlphaTabApi, type midi, type model } from '@coderline/alphatab';
 import { primeAudioContextOnUserGesture } from '../utils/mobileAudio';
 import { createTabPlayerApi } from './alphatabAdapter';
 
@@ -42,7 +42,6 @@ export class PlaybackEngine {
   private eventsWired = false;
   private songReady = false;
   private audioTrackIndices: number[] = [];
-  private mountedDisplayCount = 0;
   private scoreBytes: Uint8Array | null = null;
   private displayTrackIndices: number[] = [];
   private tabResizeObserver: ResizeObserver | null = null;
@@ -60,7 +59,6 @@ export class PlaybackEngine {
     if (!this.api) {
       const layoutTracks = Math.max(displayedTrackCount, 1);
       this.api = createTabPlayerApi(container, scrollElement, layoutTracks);
-      this.mountedDisplayCount = layoutTracks;
       this.wireEvents();
     }
   }
@@ -173,7 +171,7 @@ export class PlaybackEngine {
         const api = this.api;
         if (!api?.score) return;
         try {
-          api.resizeRender();
+          api.renderer.resizeRender();
         } catch {
           /* render may defer until fonts load */
         }
@@ -229,7 +227,7 @@ export class PlaybackEngine {
     if (!api) return;
 
     const multi = displayedTrackCount > 1;
-    api.settings.display.staveProfile = multi ? 'TabMixed' : 'Tab';
+    api.settings.display.staveProfile = multi ? StaveProfile.TabMixed : StaveProfile.Tab;
     api.settings.display.barsPerRow = multi ? 2 : 4;
     api.updateSettings();
   }
