@@ -253,6 +253,17 @@ const PRELOADED_SONGS_RAW: PreloadedSong[] = [
     url: assetUrl('preloaded/free-bird.gp'),
   },
   // AI_CHANGE:
+  // Tool: Codex
+  // Model: GPT-5
+  // Timestamp: 2026-06-22T14:58:18-04:00
+  // Purpose: Adds Ramblin' Man to the preloaded sample picker.
+  // Reason: User provided an Allman Brothers Band GP file to include in the in-app demo library.
+  {
+    id: 'ramblin-man',
+    label: "Ramblin' Man — The Allman Brothers Band",
+    url: assetUrl('preloaded/ramblin-man.gp'),
+  },
+  // AI_CHANGE:
   // Tool: Cursor
   // Model: Composer
   // Timestamp: 2026-06-05T14:10:00-04:00
