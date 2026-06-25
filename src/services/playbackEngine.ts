@@ -174,6 +174,7 @@ export class PlaybackEngine {
         this.loopSeeking = true;
         api.tickPosition = this.loopPlaybackRange.startTick;
         this.currentTickCached = this.loopPlaybackRange.startTick;
+        this.currentMsCached = this.loopStart;
         this.callbacks.onPosition?.({
           ms: this.currentMsCached,
           tick: this.currentTickCached,
@@ -219,6 +220,7 @@ export class PlaybackEngine {
         // Reason: Some repeat ranges can emit playerFinished before the position-change loop guard runs, which looks like the app paused itself.
         api.tickPosition = this.loopPlaybackRange.startTick;
         this.currentTickCached = this.loopPlaybackRange.startTick;
+        this.currentMsCached = this.loopStart;
         this.callbacks.onPosition?.({
           ms: this.currentMsCached,
           tick: this.currentTickCached,
@@ -486,18 +488,17 @@ export class PlaybackEngine {
       if (
         this.loopEnabled &&
         this.loopPlaybackRange &&
-        this.loopPlaybackRange.endTick > this.loopPlaybackRange.startTick &&
-        (this.currentTickCached < this.loopPlaybackRange.startTick ||
-          this.currentTickCached >= this.loopPlaybackRange.endTick)
+        this.loopPlaybackRange.endTick > this.loopPlaybackRange.startTick
       ) {
         // AI_CHANGE:
         // Tool: Codex
         // Model: GPT-5
-        // Timestamp: 2026-06-25T16:24:10-04:00
-        // Purpose: Enter click-selected Repeat ranges by tick so repeated systems seek to the selected visual occurrence.
-        // Reason: The same millisecond range can map alphaTab's cursor to an earlier repeated system.
+        // Timestamp: 2026-06-25T18:12:34-04:00
+        // Purpose: Re-seed click-selected Repeat playback from the loop tick start on every Play.
+        // Reason: alphaTab can keep a stopped song-level position while FretFlow's cached tick still looks inside the loop, causing alternating starts from song beginning.
         api.tickPosition = this.loopPlaybackRange.startTick;
         this.currentTickCached = this.loopPlaybackRange.startTick;
+        this.currentMsCached = this.loopStart;
         this.callbacks.onPosition?.({
           ms: this.currentMsCached,
           tick: this.currentTickCached,

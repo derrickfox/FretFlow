@@ -80,6 +80,10 @@ async function seekPlayback(page: import('@playwright/test').Page, ms: number) {
   }, ms);
 }
 
+async function playbackPosition(page: import('@playwright/test').Page) {
+  return Number(await page.locator('input[aria-label="Playback position"]').inputValue());
+}
+
 async function firstDenseTabNoteRun(page: import('@playwright/test').Page) {
   return page.evaluate(() => {
     const surface = document.querySelector('.at-surface') as HTMLElement | null;
@@ -365,5 +369,42 @@ test.describe('fretboard UI', () => {
     await page.waitForTimeout(2400);
     await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
     await expect.poll(() => activeFretboardDotCount(page), { timeout: 1000 }).toBeGreaterThan(0);
+  });
+
+  test('repeat play-pause cycles always restart inside a mid-song loop', async ({ page }) => {
+    await loadSong(page, 'sink-into-the-underground');
+    await showOnlyTrackOne(page);
+
+    await page.getByRole('button', { name: 'Loop section off', exact: true }).click();
+    await expect(
+      page.getByText('Click a note on the tab to set the loop start. Click Loop again to cancel.'),
+    ).toBeVisible();
+    await clickTabSurfacePoint(page, { x: 417, y: 973 });
+    await expect(page.getByText('Now click a note to set the loop end.')).toBeVisible();
+    await clickTabSurfacePoint(page, { x: 739, y: 973 });
+    await expect(page.getByRole('button', { name: 'Loop section on', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+
+    // AI_CHANGE:
+    // Tool: Codex
+    // Model: GPT-5
+    // Timestamp: 2026-06-25T18:12:34-04:00
+    // Purpose: Exercise repeated Play/Pause starts after a mid-song Repeat loop is selected.
+    // Reason: A stale alphaTab stop position made alternating Play clicks start at song beginning instead of the selected loop.
+    for (let cycle = 0; cycle < 3; cycle += 1) {
+      await page.getByRole('button', { name: 'Play', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+      await expect
+        .poll(() => playbackPosition(page), {
+          message: `cycle ${cycle + 1} should not restart at the beginning of the song`,
+          timeout: 1200,
+        })
+        .toBeGreaterThan(1000);
+      await assertPlaybackCursorInsideLoop(page);
+      await page.getByRole('button', { name: 'Pause', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
+    }
   });
 });
