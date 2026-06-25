@@ -1,0 +1,90 @@
+/* AI_CHANGE:
+   Tool: Claude Code
+   Model: claude-opus-4-7
+   Timestamp: 2026-06-25T14:30:00-04:00
+   Purpose: Overlay markers anchored to alphaTab beat positions, draggable to retune the loop.
+   Reason: Lets users grab-and-slide loop start/end directly on the tab notation. */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.marker {
+  position: absolute;
+  width: 3px;
+  pointer-events: auto;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.markerLine {
+  position: absolute;
+  inset: 0;
+  background: var(--marker-color, rgba(74, 124, 255, 0.95));
+  box-shadow: 0 0 6px var(--marker-glow, rgba(74, 124, 255, 0.55));
+  border-radius: 2px;
+}
+
+.markerStart {
+  --marker-color: rgba(60, 200, 120, 0.95);
+  --marker-glow: rgba(60, 200, 120, 0.55);
+}
+
+.markerEnd {
+  --marker-color: rgba(255, 110, 110, 0.95);
+  --marker-glow: rgba(255, 110, 110, 0.55);
+}
+
+.handle {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translate(-50%, 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--marker-color, rgba(74, 124, 255, 0.95));
+  color: #0c1224;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  user-select: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+.markerEnd .handle {
+  top: -14px;
+  transform: translate(calc(-50% + 0px), 0);
+}
+
+.region {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(74, 124, 255, 0.08);
+  border-top: 1px dashed rgba(150, 180, 255, 0.4);
+  border-bottom: 1px dashed rgba(150, 180, 255, 0.4);
+}
+
+/* AI_CHANGE:
+   Tool: Codex
+   Model: GPT-5
+   Timestamp: 2026-06-25T16:24:10-04:00
+   Purpose: Draw FretFlow's Repeat cursor inside the selected A/B marker band.
+   Reason: alphaTab can show its native cursor on an earlier repeated system even while playback is constrained to a later loop. */
+.playbackCursor {
+  position: absolute;
+  width: 3px;
+  pointer-events: none;
+  background: rgba(220, 50, 50, 0.9);
+  box-shadow: 0 0 6px rgba(200, 40, 40, 0.5);
+  border-radius: 2px;
+}

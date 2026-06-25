@@ -1,7 +1,13 @@
 .wrapper {
   width: 100%;
   overflow-x: auto;
-  padding: 0.5rem 0 1rem;
+  /* AI_CHANGE:
+     Tool: Codex
+     Model: GPT-5
+     Timestamp: 2026-06-25T18:36:18-04:00
+     Purpose: Tighten the fretboard's outer whitespace without shrinking the playable neck.
+     Reason: The user wanted the vertical spacing around the fretboard to match the compact dock-to-fretboard gap. */
+  padding: 0;
 }
 
 .neck {
@@ -13,7 +19,7 @@
   border-radius: 12px;
   border: 2px solid #5a4030;
   box-shadow: inset 0 2px 24px rgba(0, 0, 0, 0.45), 0 8px 32px rgba(0, 0, 0, 0.35);
-  padding: 0.35rem 0.5rem 0.75rem 0;
+  padding: 0 0.4rem 0.15rem 0;
 }
 
 .leftHanded {
@@ -133,7 +139,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  padding: 0.15rem 0.5rem 0.35rem 3.25rem;
+  padding: 0.05rem 0.5rem 0.15rem 3.25rem;
 }
 
 .capoBadge,

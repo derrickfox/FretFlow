@@ -40,15 +40,16 @@ describe('string tuning and capo', () => {
     expect(events[0]?.capo).toBe(6);
   });
 
-  it('hotel-california-solo capo offsets events on the neck', async () => {
+  it('hotel-california-solo Guitar Solo track has no capo', async () => {
     const { result } = await parseGuitarProFile(
       loadBuffer('public/preloaded/hotel-california-solo.gp'),
     );
-    const guitar = result.tracks.find((t) => t.isGuitar && t.capo > 0);
-    expect(guitar?.capo).toBe(7);
-    const events = result.eventsByTrack.get(guitar!.index) ?? [];
+    const solo = result.tracks.find((t) => t.name === 'Guitar Solo');
+    expect(solo?.capo).toBe(0);
+    const events = result.eventsByTrack.get(solo!.index) ?? [];
     const sample = events.find((e) => e.fret > 0);
     expect(sample).toBeDefined();
-    expect(tabFretToNeckFret(sample!.fret, sample!.capo)).toBeGreaterThan(sample!.capo);
+    expect(sample!.capo).toBe(0);
+    expect(tabFretToNeckFret(sample!.fret, sample!.capo)).toBe(sample!.fret);
   });
 });

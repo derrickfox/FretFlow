@@ -26,6 +26,7 @@ import { classifyTrackKind, isGuitarLikeKind } from '../utils/trackClassificatio
 
 export const ALPHATAB_FONT_DIR = assetUrl('font/');
 export const ALPHATAB_SOUND_FONT = assetUrl('soundfont/sonivox.sf2');
+export const DEFAULT_MASTER_VOLUME = 1.35;
 
 export function createAlphaTabSettings(): Settings {
   return new Settings();
@@ -58,7 +59,16 @@ export function createTabPlayerSettings(
       enableCursor: true,
       enableAnimatedBeatCursor: true,
       enableElementHighlighting: true,
-      enableUserInteraction: true,
+      // AI_CHANGE:
+      // Tool: Claude Code
+      // Model: claude-opus-4-7
+      // Timestamp: 2026-06-25T15:30:00-04:00
+      // Purpose: Disable alphaTab's click-to-seek + drag-to-select side effects.
+      // Reason: Clicking a beat would seek the playhead and set alphaTab's own playback range,
+      //   which fought with our loop overlay — auto-scrolling the tab back to the start after the
+      //   second loop click made the action feel like a reset. beatMouseDown still fires for our
+      //   custom loop handler when this is off.
+      enableUserInteraction: false,
       soundFont: ALPHATAB_SOUND_FONT,
       playerMode: 'EnabledSynthesizer',
       // AI_CHANGE:
