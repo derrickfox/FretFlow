@@ -100,7 +100,13 @@
 .main {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  /* AI_CHANGE:
+     Tool: Codex
+     Model: GPT-5
+     Timestamp: 2026-06-25T18:47:51-04:00
+     Purpose: Match the playback-dock to fretboard spacing to the compact header-to-dock gap.
+     Reason: The fretboard was still visually separated by the parent stack gap even after trimming neck padding. */
+  gap: 0.4rem;
   padding: 0.65rem 1rem 1.5rem;
   max-width: 1600px;
   margin: 0 auto;
@@ -364,4 +370,3 @@
   font-size: 0.85rem;
   margin: 0;
 }
-
