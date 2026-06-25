@@ -6,40 +6,57 @@
   overflow: hidden;
 }
 
-.panelHeader {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.5rem 0.85rem;
-  border-bottom: 1px solid rgba(100, 120, 180, 0.2);
-  background: rgba(24, 30, 48, 0.6);
-}
-
-.title {
-  margin: 0;
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: rgba(180, 195, 230, 0.95);
-}
-
-.hint {
-  font-size: 0.72rem;
-  color: rgba(150, 165, 200, 0.65);
-}
-
+/* AI_CHANGE:
+   Tool: Codex
+   Model: GPT-5
+   Timestamp: 2026-06-25T17:47:42-04:00
+   Purpose: Let the sheet surface sit directly inside the tab panel after removing the header.
+   Reason: Removing the header saves vertical room while preserving the bordered tab container. */
+/* AI_CHANGE:
+   Tool: Codex
+   Model: GPT-5
+   Timestamp: 2026-06-25T17:18:07-04:00
+   Purpose: Give the tab notation pane enough height to dominate the first viewport.
+   Reason: The song detail cards should sit below the fold so practice starts with fretboard and tab in focus. */
 /* Light “sheet paper” surface so alphaTab’s dark glyphs stay readable */
 .scroll {
-  max-height: min(42vh, 360px);
+  height: clamp(460px, 58vh, 680px);
+  max-height: none;
   overflow: auto;
   overflow-x: auto;
   padding: 0.5rem 0.65rem 0.85rem;
   padding-right: 1.25rem;
   -webkit-overflow-scrolling: touch;
   background: linear-gradient(180deg, #faf6ee 0%, #f0ebe2 100%);
-  border-top: 1px solid rgba(180, 170, 150, 0.45);
+}
+
+@media (max-width: 720px) {
+  .scroll {
+    height: min(58vh, 520px);
+  }
+}
+
+.hostWrap {
+  position: relative;
+  width: 100%;
+}
+
+.hostWrapSelecting {
+  outline: 2px dashed rgba(245, 185, 66, 0.55);
+  outline-offset: 2px;
+  border-radius: 6px;
+  cursor: crosshair;
+}
+
+/* AI_CHANGE:
+   Tool: Codex
+   Model: GPT-5
+   Timestamp: 2026-06-25T16:24:10-04:00
+   Purpose: Hide alphaTab's native cursor while FretFlow draws the active Repeat cursor.
+   Reason: alphaTab can place its cursor on an earlier repeated system than the clicked A/B markers. */
+.hostWrapLooping :global(.at-cursor-bar),
+.hostWrapLooping :global(.at-cursor-beat) {
+  opacity: 0;
 }
 
 .host {

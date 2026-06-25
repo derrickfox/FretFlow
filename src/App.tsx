@@ -10,6 +10,9 @@ import { TabViewer } from './components/TabViewer';
 import { SongInfoPanel } from './components/SongInfoPanel';
 import { parseGuitarProFile, refreshEventsFromTickCache } from './services/guitarProParser';
 import { playbackEngine } from './services/playbackEngine';
+import type { MarkerRect } from './services/playbackEngine';
+import type { BeatClickRange } from './services/playbackEngine';
+import type { BeatTickRange } from './services/playbackEngine';
 import type {
   DisplayMode,
   GuitarNoteEvent,
@@ -28,6 +31,10 @@ import {
   TRAILS_PEAK_GLOW_MIN,
 } from './types/guitar';
 import { formatTuningDetail, isStandardTuning } from './utils/stringTuning';
+import {
+  capoFretForNeckTracks,
+  pickDefaultNeckTrackIndices,
+} from './utils/defaultNeckTracks';
 import styles from './App.module.css';
 
 function App() {
@@ -52,6 +59,32 @@ function App() {
   const [speed, setSpeed] = useState(1);
   const [metronomeOn, setMetronomeOn] = useState(false);
   const [preloadedSongId, setPreloadedSongId] = useState<string | null>(null);
+  const [loopStartMarkerRect, setLoopStartMarkerRect] = useState<MarkerRect | null>(null);
+  const [loopEndMarkerRect, setLoopEndMarkerRect] = useState<MarkerRect | null>(null);
+  const [loopPlaybackTickRange, setLoopPlaybackTickRange] = useState<BeatTickRange | null>(null);
+  // AI_CHANGE:
+  // Tool: Claude Code
+  // Model: claude-opus-4-7
+  // Timestamp: 2026-06-25T14:30:00-04:00
+  // Purpose: Track the click-to-set loop flow (start, then end) initiated by the Loop button.
+  // Reason: Replaces slider-only loop setup; first click on tab = start, second click = end.
+  const [loopSelectionMode, setLoopSelectionMode] = useState<
+    'idle' | 'awaiting-start' | 'awaiting-end'
+  >('idle');
+  const [tabRenderTick, setTabRenderTick] = useState(0);
+  // AI_CHANGE:
+  // Tool: Claude Code
+  // Model: claude-opus-4-7
+  // Timestamp: 2026-06-25T15:10:00-04:00
+  // Purpose: Atomic selection-state ref so duplicate beatMouseDown fires no-op.
+  // Reason: alphaTab can fire beatMouseDown multiple times per click (multiple subscribers
+  //   or rapid re-fires). React state updates are async, so we mutate the ref synchronously
+  //   inside the handler — second invocation sees mode='idle' and exits.
+  const loopSelectionRef = useRef<{
+    mode: 'idle' | 'awaiting-start' | 'awaiting-end';
+    pendingStart: number | null;
+    pendingStartTick: number | null;
+  }>({ mode: 'idle', pendingStart: null, pendingStartTick: null });
 
   const noteCountByTrack = useMemo(() => {
     if (!parseResult) return new Map<number, number>();
@@ -100,7 +133,7 @@ function App() {
       .filter((t): t is NonNullable<typeof t> => t != null);
     const primary =
       visible.find((t) => t.isGuitar) ?? visible[0];
-    const capoFret = Math.max(0, ...visible.map((t) => t.capo ?? 0));
+    const capoFret = capoFretForNeckTracks(visible);
     const tuningMidi = primary?.tuningMidi?.length ? primary.tuningMidi : undefined;
     const stringCount = primary?.stringCount ?? 6;
     const standard = tuningMidi ? isStandardTuning(tuningMidi) : true;
@@ -140,6 +173,62 @@ function App() {
     return `${names.slice(0, 2).join(', ')} +${names.length - 2} more`;
   }, [parseResult, neckTracks]);
 
+  const handleTabBeatClick = useCallback((beatRange: BeatClickRange) => {
+    const state = loopSelectionRef.current;
+    if (state.mode === 'idle') return;
+    if (state.mode === 'awaiting-start') {
+      loopSelectionRef.current = {
+        mode: 'awaiting-end',
+        pendingStart: beatRange.clickedMs,
+        pendingStartTick: beatRange.clickedTick,
+      };
+      setLoopStartMarkerRect(beatRange.markerRect);
+      setLoopEndMarkerRect(null);
+      setPractice((p) => ({ ...p, loopStartMs: beatRange.clickedMs }));
+      setLoopSelectionMode('awaiting-end');
+      return;
+    }
+    // AI_CHANGE:
+    // Tool: Codex
+    // Model: GPT-5
+    // Timestamp: 2026-06-25T15:15:32-04:00
+    // Purpose: Use clicked tab coordinates for Repeat timing while preserving reverse-order clicks.
+    // Reason: Beat-boundary timing made playback loop outside the visible A/B marker constraints.
+    const start = state.pendingStart ?? 0;
+    const lo = Math.min(start, beatRange.clickedMs);
+    const hi = Math.max(start, beatRange.clickedMs);
+    const span = hi - lo;
+    const end = span < 250 ? lo + 250 : hi;
+    const startTick = state.pendingStartTick ?? beatRange.clickedTick;
+    const selectedTickRange =
+      start <= beatRange.clickedMs
+        ? { startTick, endTick: beatRange.clickedTick, nextTick: beatRange.clickedTick }
+        : { startTick: beatRange.clickedTick, endTick: startTick, nextTick: startTick };
+    const tickRange = {
+      startTick: Math.min(selectedTickRange.startTick, selectedTickRange.endTick),
+      endTick: Math.max(selectedTickRange.startTick, selectedTickRange.endTick),
+      nextTick: Math.max(selectedTickRange.startTick, selectedTickRange.endTick),
+    };
+    loopSelectionRef.current = { mode: 'idle', pendingStart: null, pendingStartTick: null };
+    // AI_CHANGE:
+    // Tool: Codex
+    // Model: GPT-5
+    // Timestamp: 2026-06-25T15:27:11-04:00
+    // Purpose: Keep Repeat markers anchored to the clicked tab coordinates even when playback ends after that beat.
+    // Reason: Repeat needs a musical end boundary, but users expect markers to appear where they clicked.
+    setLoopEndMarkerRect(beatRange.markerRect);
+    setLoopPlaybackTickRange(tickRange);
+    setPractice((p) => ({
+      ...p,
+      loopEnabled: true,
+      loopStartMs: lo,
+      loopEndMs: end,
+    }));
+    playbackEngine.setLoopPlaybackRange(tickRange);
+    playbackEngine.setLoop(true, lo, end);
+    setLoopSelectionMode('idle');
+  }, []);
+
   useEffect(() => {
     playbackEngine.destroy();
 
@@ -147,7 +236,13 @@ function App() {
     playbackEngine.attachCallbacks({
       onPosition: (pos) => {
         const now = performance.now();
-        if (now - lastPositionUpdate < 32) return;
+        // AI_CHANGE:
+        // Tool: Codex
+        // Model: GPT-5
+        // Timestamp: 2026-06-25T16:44:30-04:00
+        // Purpose: Let explicit seek/loop-jump position updates render immediately.
+        // Reason: The first click-selected Repeat play can jump by tick before normal playback ticks arrive, and throttling hid the initial active indicator.
+        if (!pos.isSeek && now - lastPositionUpdate < 32) return;
         lastPositionUpdate = now;
         setCurrentMs(pos.ms);
         setCurrentTick(pos.tick);
@@ -175,9 +270,11 @@ function App() {
       },
       onError: (msg) => setPlaybackError(msg),
       onFinished: () => setIsPlaying(false),
+      onTabRendered: () => setTabRenderTick((n) => n + 1),
+      onBeatClick: handleTabBeatClick,
     });
     return () => playbackEngine.destroy();
-  }, []);
+  }, [handleTabBeatClick]);
 
   // AI_CHANGE:
   // Tool: Cursor
@@ -243,6 +340,24 @@ function App() {
     setCurrentMs(0);
     setCurrentTick(0);
     setIsReady(false);
+    setLoopStartMarkerRect(null);
+    setLoopEndMarkerRect(null);
+    setLoopPlaybackTickRange(null);
+    // AI_CHANGE:
+    // Tool: Codex
+    // Model: GPT-5
+    // Timestamp: 2026-06-25T15:12:15-04:00
+    // Purpose: Clear Repeat/loop selection whenever a different score starts loading.
+    // Reason: Old loop bounds and pending click-to-set state could carry into the next song and arm Repeat at the wrong time range.
+    setLoopSelectionMode('idle');
+    loopSelectionRef.current = { mode: 'idle', pendingStart: null, pendingStartTick: null };
+    playbackEngine.setLoopPlaybackRange(null);
+    setPractice((p) => ({
+      ...p,
+      loopEnabled: false,
+      loopStartMs: 0,
+      loopEndMs: 0,
+    }));
 
     try {
       const bytes = new Uint8Array(buffer);
@@ -277,23 +392,12 @@ function App() {
         loopEndMs: result.metadata.durationMs || 60000,
       }));
 
-      const tracksWithNotes = result.tracks
-        .filter((t) => (result.eventsByTrack.get(t.index)?.length ?? 0) > 0)
-        .map((t) => t.index);
-      const defaultGuitar = guitarTracks
-        .filter((t) => (result.eventsByTrack.get(t.index)?.length ?? 0) > 0)
-        .map((t) => t.index);
+      const defaultNeck = pickDefaultNeckTrackIndices(result);
       const allIndices = result.tracks.map((t) => t.index);
       const defaultAudio = result.tracks
         .filter((t) => t.kind !== 'percussion')
         .map((t) => t.index);
-      setNeckTracks(
-        defaultGuitar.length > 0
-          ? defaultGuitar
-          : tracksWithNotes.length > 0
-            ? tracksWithNotes
-            : [result.tracks[0].index],
-      );
+      setNeckTracks(defaultNeck);
       setAudioTracks(defaultAudio.length > 0 ? defaultAudio : allIndices);
     } catch (err) {
       setParseError(err instanceof Error ? err.message : 'Failed to parse file');
@@ -382,12 +486,48 @@ function App() {
               }}
               onSpeedChange={setSpeed}
               onMetronomeToggle={() => setMetronomeOn((v) => !v)}
+              loopSelectionMode={loopSelectionMode}
+              onLoopButtonClick={() => {
+                if (practice.loopEnabled) {
+                  setPractice((p) => ({ ...p, loopEnabled: false }));
+                  setLoopStartMarkerRect(null);
+                  setLoopEndMarkerRect(null);
+                  setLoopPlaybackTickRange(null);
+                  playbackEngine.setLoopPlaybackRange(null);
+                  loopSelectionRef.current = { mode: 'idle', pendingStart: null, pendingStartTick: null };
+                  setLoopSelectionMode('idle');
+                  return;
+                }
+                if (loopSelectionMode !== 'idle') {
+                  setLoopStartMarkerRect(null);
+                  setLoopEndMarkerRect(null);
+                  setLoopPlaybackTickRange(null);
+                  playbackEngine.setLoopPlaybackRange(null);
+                  loopSelectionRef.current = { mode: 'idle', pendingStart: null, pendingStartTick: null };
+                  setLoopSelectionMode('idle');
+                  return;
+                }
+                setLoopStartMarkerRect(null);
+                setLoopEndMarkerRect(null);
+                setLoopPlaybackTickRange(null);
+                playbackEngine.setLoopPlaybackRange(null);
+                loopSelectionRef.current = {
+                  mode: 'awaiting-start',
+                  pendingStart: null,
+                  pendingStartTick: null,
+                };
+                setLoopSelectionMode('awaiting-start');
+              }}
               onLoopEnabledChange={(enabled) =>
                 setPractice((p) => ({ ...p, loopEnabled: enabled }))
               }
-              onLoopRangeChange={(start, end) =>
-                setPractice((p) => ({ ...p, loopStartMs: start, loopEndMs: end }))
-              }
+              onLoopRangeChange={(start, end) => {
+                setLoopStartMarkerRect(null);
+                setLoopEndMarkerRect(null);
+                setLoopPlaybackTickRange(null);
+                playbackEngine.setLoopPlaybackRange(null);
+                setPractice((p) => ({ ...p, loopStartMs: start, loopEndMs: end }));
+              }}
             />
           </div>
         ) : null}
@@ -427,6 +567,24 @@ function App() {
               visible={Boolean(parseResult && tabNotationTracks.length > 0)}
               scrollRef={tabScrollRef}
               hostRef={tabHostRef}
+              loopEnabled={practice.loopEnabled}
+              showStartOnly={loopSelectionMode === 'awaiting-end'}
+              loopStartMs={practice.loopStartMs}
+              loopStartMarkerRect={loopStartMarkerRect}
+              loopEndMs={practice.loopEndMs}
+              loopEndMarkerRect={loopEndMarkerRect}
+              currentTick={currentTick}
+              loopPlaybackTickRange={loopPlaybackTickRange}
+              selecting={loopSelectionMode !== 'idle'}
+              renderTick={tabRenderTick}
+              onTabBeatClick={handleTabBeatClick}
+              onLoopRangeChange={(start, end) => {
+                setLoopStartMarkerRect(null);
+                setLoopEndMarkerRect(null);
+                setLoopPlaybackTickRange(null);
+                playbackEngine.setLoopPlaybackRange(null);
+                setPractice((p) => ({ ...p, loopStartMs: start, loopEndMs: end }));
+              }}
             />
           </div>
         </section>

@@ -1,15 +1,11 @@
 import { formatTime } from '../utils/noteHelpers';
 import { primeAudioContextOnUserGesture } from '../utils/mobileAudio';
-import {
-  LoopIcon,
-  MetronomeIcon,
-  PauseIcon,
-  PlayIcon,
-  RestartIcon,
-} from './PlaybackIcons';
+import { LoopIcon, PauseIcon, PlayIcon } from './PlaybackIcons';
 import styles from './PlaybackControls.module.css';
 
 const SPEEDS = [0.5, 0.75, 1, 1.25] as const;
+
+type LoopSelectionMode = 'idle' | 'awaiting-start' | 'awaiting-end';
 
 type PlaybackControlsProps = {
   /** Compact horizontal layout for the sticky top playback bar */
@@ -23,11 +19,14 @@ type PlaybackControlsProps = {
   loopEnabled: boolean;
   loopStartMs: number;
   loopEndMs: number;
+  loopSelectionMode?: LoopSelectionMode;
   onPlayPause: () => void;
   onRestart: () => void;
   onSeek: (ms: number) => void;
   onSpeedChange: (speed: number) => void;
   onMetronomeToggle: () => void;
+  /** Optional: when provided, the Loop button delegates to this instead of toggling */
+  onLoopButtonClick?: () => void;
   onLoopEnabledChange: (enabled: boolean) => void;
   onLoopRangeChange: (startMs: number, endMs: number) => void;
 };
@@ -43,14 +42,27 @@ export function PlaybackControls({
   loopEnabled,
   loopStartMs,
   loopEndMs,
+  loopSelectionMode = 'idle',
   onPlayPause,
   onRestart,
   onSeek,
   onSpeedChange,
   onMetronomeToggle,
+  onLoopButtonClick,
   onLoopEnabledChange,
   onLoopRangeChange,
 }: PlaybackControlsProps) {
+  const selecting = loopSelectionMode !== 'idle';
+  const handleLoopButton = () => {
+    if (onLoopButtonClick) onLoopButtonClick();
+    else onLoopEnabledChange(!loopEnabled);
+  };
+  const selectionHint =
+    loopSelectionMode === 'awaiting-start'
+      ? 'Click a note on the tab to set the loop start. Click Loop again to cancel.'
+      : loopSelectionMode === 'awaiting-end'
+      ? 'Now click a note to set the loop end.'
+      : null;
   const max = Math.max(totalMs, 1);
   const loopStartMax = Math.max(loopEndMs - 500, 0);
   const loopEndMin = Math.min(loopStartMs + 500, max);
@@ -65,6 +77,12 @@ export function PlaybackControls({
       <section className={`${styles.panel} ${styles.panelDocked}`}>
         <div className={styles.dockBar}>
           <div className={styles.transport}>
+            {/* AI_CHANGE:
+                Tool: Codex
+                Model: GPT-5
+                Timestamp: 2026-06-25T17:18:07-04:00
+                Purpose: Keep the docked transport focused on play/pause and Repeat.
+                Reason: Restart and Metronome controls were removed from the primary practice dock per user annotation. */}
             <button
               type="button"
               className={styles.iconBtnPrimary}
@@ -77,33 +95,26 @@ export function PlaybackControls({
             </button>
             <button
               type="button"
-              className={styles.iconBtn}
-              onClick={onRestart}
+              className={`${styles.iconBtn} ${
+                loopEnabled || selecting ? styles.iconBtnOn : ''
+              } ${selecting ? styles.iconBtnSelecting : ''}`}
+              onClick={handleLoopButton}
               disabled={!isReady}
-              aria-label="Restart"
-              title="Restart"
-            >
-              <RestartIcon />
-            </button>
-            <button
-              type="button"
-              className={`${styles.iconBtn} ${metronomeOn ? styles.iconBtnOn : ''}`}
-              onClick={onMetronomeToggle}
-              disabled={!isReady}
-              aria-label={metronomeOn ? 'Metronome on' : 'Metronome off'}
-              aria-pressed={metronomeOn}
-              title="Metronome"
-            >
-              <MetronomeIcon />
-            </button>
-            <button
-              type="button"
-              className={`${styles.iconBtn} ${loopEnabled ? styles.iconBtnOn : ''}`}
-              onClick={() => onLoopEnabledChange(!loopEnabled)}
-              disabled={!isReady}
-              aria-label={loopEnabled ? 'Loop section on' : 'Loop section off'}
-              aria-pressed={loopEnabled}
-              title="Loop section"
+              aria-label={
+                selecting
+                  ? 'Cancel loop selection'
+                  : loopEnabled
+                  ? 'Loop section on'
+                  : 'Loop section off'
+              }
+              aria-pressed={loopEnabled || selecting}
+              title={
+                selecting
+                  ? 'Click again to cancel loop selection'
+                  : loopEnabled
+                  ? 'Loop on — click to turn off'
+                  : 'Loop section — click then pick start/end on the tab'
+              }
             >
               <LoopIcon />
             </button>
@@ -140,35 +151,18 @@ export function PlaybackControls({
           </div>
         </div>
 
-        {loopEnabled ? (
-          <div className={styles.loopBar}>
-            <span className={styles.loopTime}>{formatTime(loopStartMs)}</span>
-            <input
-              type="range"
-              className={styles.loopRange}
-              min={0}
-              max={loopStartMax}
-              value={Math.min(loopStartMs, loopStartMax)}
-              onChange={(e) => onLoopRangeChange(Number(e.target.value), loopEndMs)}
-              disabled={!isReady}
-              aria-label="Loop start"
-            />
-            <span className={styles.loopDivider} aria-hidden="true">
-              –
-            </span>
-            <input
-              type="range"
-              className={styles.loopRange}
-              min={loopEndMin}
-              max={max}
-              value={Math.min(loopEndMs, max)}
-              onChange={(e) => onLoopRangeChange(loopStartMs, Number(e.target.value))}
-              disabled={!isReady}
-              aria-label="Loop end"
-            />
-            <span className={styles.loopTime}>{formatTime(loopEndMs)}</span>
-          </div>
+        {selectionHint ? (
+          <p className={styles.loopHint} role="status">
+            {selectionHint}
+          </p>
         ) : null}
+
+        {/* AI_CHANGE:
+            Tool: Codex
+            Model: GPT-5
+            Timestamp: 2026-06-25T17:18:07-04:00
+            Purpose: Remove duplicate docked loop sliders while preserving tab-marker Repeat editing.
+            Reason: Users now set Repeat bounds directly on the tab, so the extra sliders cluttered the dock. */}
 
         {!isReady ? <p className={styles.hintDocked}>Loading audio…</p> : null}
       </section>

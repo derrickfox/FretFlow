@@ -65,6 +65,33 @@
   background: #2a3a5c;
 }
 
+.iconBtnSelecting {
+  border-color: #f5b942;
+  color: #ffd47a;
+  background: #4a3a1c;
+  animation: loopPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes loopPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 185, 66, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(245, 185, 66, 0);
+  }
+}
+
+.loopHint {
+  margin: 0;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(245, 185, 66, 0.12);
+  border: 1px solid rgba(245, 185, 66, 0.35);
+  color: #f3d490;
+  font-size: 0.78rem;
+  text-align: center;
+}
+
 .iconBtnPrimary:disabled,
 .iconBtn:disabled,
 .speedChip:disabled {
